@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ChatFlow — Conecta con el mundo. Chat en tiempo real con salas, emojis, fotos, audios y más.">
+  <meta name="theme-color" content="#0f0f1e">
+  <title>ChatFlow — Chat en Tiempo Real</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Emoji Picker Element (Web Component) -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="elstyleeschat.css">
+</head>
+<body>
+
+<!-- ============================================================
+     🔐 AUTH SCREEN — Login / Register
+     ============================================================ -->
+<div id="auth-screen">
+  <!-- Animated background -->
+  <div class="auth-bg">
+    <div class="auth-orb orb-1"></div>
+    <div class="auth-orb orb-2"></div>
+    <div class="auth-orb orb-3"></div>
+  </div>
+
+  <!-- Card -->
+  <div class="auth-card" role="main">
+    <!-- Brand -->
+    <div class="auth-brand">
+      <div class="brand-logo" aria-hidden="true">💬</div>
+      <h1>ChatFlow</h1>
+      <p>Tu espacio de conversación en tiempo real</p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs" role="tablist" aria-label="Modo de acceso">
+      <button id="tab-login" class="auth-tab active" role="tab" aria-selected="true" aria-controls="login-form">
+        Iniciar Sesión
+      </button>
+      <button id="tab-register" class="auth-tab" role="tab" aria-selected="false" aria-controls="register-form">
+        Registrarse
+      </button>
+    </div>
+
+    <!-- ===== LOGIN FORM ===== -->
+    <form id="login-form" class="auth-form" novalidate aria-label="Formulario de inicio de sesión">
+      <div class="form-group">
+        <label for="login-email">Correo electrónico</label>
+        <input
+          type="email"
+          id="login-email"
+          placeholder="tu@email.com"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="login-password">Contraseña</label>
+        <div class="password-field">
+          <input
+            type="password"
+            id="login-password"
+            placeholder="Tu contraseña"
+            autocomplete="current-password"
+            required
+          >
+          <button type="button" class="toggle-pwd-btn" data-target="login-password" aria-label="Mostrar/ocultar contraseña">👁️</button>
+        </div>
+      </div>
+
+      <button type="button" id="forgot-password-btn" class="forgot-btn">
+        ¿Olvidaste tu contraseña?
+      </button>
+
+      <button type="submit" class="auth-submit-btn" id="login-submit-btn">
+        <span>Iniciar Sesión</span>
+      </button>
+
+      <div id="login-error" class="auth-error" role="alert" aria-live="polite"></div>
+    </form>
+
+    <!-- ===== REGISTER FORM ===== -->
+    <form id="register-form" class="auth-form" style="display:none" novalidate aria-label="Formulario de registro">
+      <!-- Full name -->
+      <div class="form-group">
+        <label for="reg-name">Nombre completo *</label>
+        <input
+          type="text"
+          id="reg-name"
+          placeholder="Ej: Juan Pérez"
+          autocomplete="name"
+          required
+        >
+      </div>
+
+      <!-- Username -->
+      <div class="form-group">
+        <label for="reg-username">Nombre de usuario *</label>
+        <input
+          type="text"
+          id="reg-username"
+          placeholder="Ej: juanperez123"
+          autocomplete="username"
+          required
+          pattern="[a-zA-Z0-9_.]+"
+          title="Solo letras, números, puntos y guiones bajos"
+        >
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="reg-email">Correo electrónico *</label>
+        <input
+          type="email"
+          id="reg-email"
+          placeholder="tu@email.com"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="reg-password">Contraseña *</label>
+        <div class="password-field">
+          <input
+            type="password"
+            id="reg-password"
+            placeholder="Mínimo 6 caracteres"
+            autocomplete="new-password"
+            required
+            minlength="6"
+          >
+          <button type="button" class="toggle-pwd-btn" data-target="reg-password" aria-label="Mostrar/ocultar contraseña">👁️</button>
+        </div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-group">
+        <label for="reg-confirm-password">Confirmar contraseña *</label>
+        <div class="password-field">
+          <input
+            type="password"
+            id="reg-confirm-password"
+            placeholder="Repite tu contraseña"
+            autocomplete="new-password"
+            required
+          >
+          <button type="button" class="toggle-pwd-btn" data-target="reg-confirm-password" aria-label="Mostrar/ocultar contraseña">👁️</button>
+        </div>
+      </div>
+
+      <!-- Phone (with country selector) -->
+      <div class="form-group">
+        <label for="reg-phone">Número de teléfono (opcional)</label>
+        <div class="phone-field">
+          <select id="country-code-select" aria-label="Código de país">
+            <!-- Populated dynamically by JavaScript -->
+          </select>
+          <input
+            type="tel"
+            id="reg-phone"
+            placeholder="Ej: 555-1234"
+            autocomplete="tel-national"
+          >
+        </div>
+      </div>
+
+      <!-- Birthday -->
+      <div class="form-group">
+        <label for="reg-birthday">Fecha de nacimiento (opcional)</label>
+        <input type="date" id="reg-birthday" autocomplete="bday">
+      </div>
+
+      <!-- Avatar -->
+      <div class="form-group">
+        <label>Foto de perfil (opcional)</label>
+        <div class="avatar-upload-area">
+          <div class="avatar-preview" id="avatar-preview-wrapper" title="Clic para elegir foto">
+            <span class="avatar-placeholder" id="avatar-placeholder-icon">📷</span>
+          </div>
+          <input
+            type="file"
+            id="reg-avatar"
+            accept="image/*"
+            style="display:none"
+            aria-label="Seleccionar foto de perfil"
+          >
+          <label for="reg-avatar" class="avatar-upload-label-btn" style="cursor:pointer">
+            <span>Elegir foto</span>
+            <span class="avatar-upload-hint">JPG, PNG o GIF · Máx 5MB</span>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="auth-submit-btn" id="register-submit-btn">
+        <span>Crear Cuenta</span>
+      </button>
+
+      <div id="register-error" class="auth-error" role="alert" aria-live="polite"></div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     💬 CHAT SCREEN
+     ============================================================ -->
+<div id="chat-screen" style="display:none" class="">
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon" aria-hidden="true">💬</div>
+      <span class="sidebar-brand-name">ChatFlow</span>
+    </div>
+
+    <!-- User -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sidebar-avatar">
+        <span id="sidebar-avatar-text">U</span>
+      </div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebar-username">Usuario</div>
+        <div class="sidebar-user-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          En línea
+        </div>
+      </div>
+      <button class="logout-btn" id="logout-btn" title="Cerrar sesión" aria-label="Cerrar sesión">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Rooms -->
+    <div class="rooms-section">
+      <div class="rooms-header">
+        <span>SALAS</span>
+        <button class="create-room-btn" id="create-room-btn" title="Crear nueva sala" aria-label="Crear nueva sala">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+      <nav id="rooms-list" class="rooms-list" aria-label="Lista de salas de chat">
+        <!-- Populated dynamically -->
+      </nav>
+    </div>
+  </aside>
+
+  <!-- Overlay for mobile sidebar close -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- ========== MAIN CHAT ========== -->
+  <main class="main-chat" id="main-chat">
+
+    <!-- Welcome state (no room selected) -->
+    <div id="welcome-screen" class="welcome-screen">
+      <div class="welcome-icon" aria-hidden="true">💬</div>
+      <h2>¡Bienvenido a ChatFlow!</h2>
+      <p>Selecciona una sala del panel izquierdo o crea una nueva para comenzar a chatear.</p>
+      <button class="btn-primary" id="welcome-create-btn" style="margin-top:12px;padding:11px 24px;">
+        + Crear Sala
+      </button>
+    </div>
+
+    <!-- Chat Room (when a room is selected) -->
+    <div id="chat-room-area" class="chat-room-area" style="display:none">
+
+      <!-- Room Header -->
+      <header class="chat-room-header">
+        <div class="chat-room-header-info">
+          <div class="room-icon-badge" id="header-room-icon" aria-hidden="true">#</div>
+          <div>
+            <h2 id="current-room-name">General</h2>
+            <p class="room-desc" id="current-room-desc">Sala de chat</p>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="header-action-btn" id="toggle-sidebar-btn" aria-label="Abrir panel de salas" style="display:none">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages -->
+      <div id="messages-container" class="messages-area" role="log" aria-label="Mensajes del chat" aria-live="polite">
+        <div class="messages-start-spacer"></div>
+      </div>
+
+      <!-- Input Area Wrapper (has emoji picker + bars inside) -->
+      <div class="input-area-wrapper">
+
+        <!-- Emoji Picker (floating above input) -->
+        <div id="emoji-picker-wrapper" class="emoji-picker-wrapper" style="display:none" aria-label="Selector de emojis">
+          <emoji-picker id="emoji-picker"></emoji-picker>
+        </div>
+
+        <!-- File Preview Bar -->
+        <div id="file-preview-bar" class="file-preview-bar" style="display:none" aria-label="Vista previa del archivo">
+          <div id="fp-icon" class="file-preview-icon" aria-hidden="true">📄</div>
+          <div class="file-preview-meta">
+            <div id="fp-name" class="file-preview-fname">archivo</div>
+            <div id="fp-size" class="file-preview-fsize">—</div>
+          </div>
+          <button class="file-preview-cancel" id="cancel-file-btn" aria-label="Cancelar archivo seleccionado">✕</button>
+        </div>
+
+        <!-- Upload Progress -->
+        <div id="upload-indicator" class="upload-indicator" style="display:none">
+          <span id="upload-label">Subiendo...</span>
+          <div class="upload-bar"><div class="upload-bar-fill" id="upload-bar-fill" style="width:0%"></div></div>
+          <span id="upload-percent">0%</span>
+        </div>
+
+        <!-- Audio Recording Bar -->
+        <div id="recording-bar" class="recording-bar" style="display:none" aria-label="Grabación de audio en progreso">
+          <div class="recording-dot" aria-hidden="true"></div>
+          <span class="recording-time" id="recording-time" aria-live="polite">0:00</span>
+          <span class="recording-label">Grabando audio…</span>
+          <button class="cancel-record-btn" id="cancel-audio-btn" aria-label="Cancelar grabación">Cancelar</button>
+          <button class="send-record-btn" id="send-audio-btn" aria-label="Enviar grabación">✓ Enviar</button>
+        </div>
+
+        <!-- Main Input Row -->
+        <div class="input-area">
+          <div class="input-main-row">
+
+            <!-- Left: Attachments + Emoji -->
+            <div class="input-left-actions">
+              <label for="photo-input" class="input-action-btn" title="Enviar foto" aria-label="Adjuntar foto" style="cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                📷
+              </label>
+              <input type="file" id="photo-input" accept="image/*" style="display:none" aria-label="Seleccionar foto">
+
+              <label for="file-input" class="input-action-btn" title="Enviar archivo" aria-label="Adjuntar archivo" style="cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                📎
+              </label>
+              <input type="file" id="file-input" style="display:none" aria-label="Seleccionar archivo">
+
+              <button class="input-action-btn" id="emoji-btn" title="Emojis" aria-label="Abrir selector de emojis" aria-expanded="false">
+                😀
+              </button>
+            </div>
+
+            <!-- Textarea -->
+            <textarea
+              id="message-input"
+              class="msg-textarea"
+              placeholder="Escribe un mensaje…"
+              rows="1"
+              aria-label="Escribe tu mensaje"
+              maxlength="2000"
+            ></textarea>
+
+            <!-- Right: Audio + Send -->
+            <div class="input-right-actions">
+              <button class="input-action-btn" id="audio-record-btn" title="Grabar audio" aria-label="Grabar nota de audio" aria-pressed="false">
+                🎙️
+              </button>
+              <button class="send-btn" id="send-message-btn" aria-label="Enviar mensaje">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <!-- end .input-area-wrapper -->
+
+    </div>
+    <!-- end #chat-room-area -->
+
+  </main>
+</div>
+<!-- end #chat-screen -->
+
+
+<!-- ============================================================
+     ➕ CREATE ROOM MODAL
+     ============================================================ -->
+<div id="create-room-modal" style="display:none" aria-modal="true" role="dialog" aria-labelledby="modal-room-title">
+  <div class="modal-overlay">
+    <div class="modal-card">
+      <h2 id="modal-room-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Crear Nueva Sala
+      </h2>
+      <form id="create-room-form" novalidate>
+
+        <div class="form-group" style="margin-bottom:14px">
+          <label for="room-name-input">Nombre de la sala *</label>
+          <input
+            type="text"
+            id="room-name-input"
+            placeholder="Ej: videojuegos, música, estudios…"
+            required
+            maxlength="30"
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px">
+          <label for="room-desc-input">Descripción (opcional)</label>
+          <input
+            type="text"
+            id="room-desc-input"
+            placeholder="¿De qué se trata esta sala?"
+            maxlength="120"
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group" style="margin-bottom:6px">
+          <label>Tipo de sala</label>
+          <div class="radio-group">
+            <label class="radio-option selected" id="radio-public-label">
+              <input type="radio" name="room-type" value="public" checked>
+              🌐 Pública
+            </label>
+            <label class="radio-option" id="radio-private-label">
+              <input type="radio" name="room-type" value="private">
+              🔒 Privada
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancel-room-btn">Cancelar</button>
+          <button type="submit" class="btn-primary" id="create-room-submit-btn">Crear Sala</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     🔍 IMAGE LIGHTBOX
+     ============================================================ -->
+<div id="lightbox" class="lightbox" style="display:none" role="dialog" aria-label="Imagen ampliada">
+  <button class="lightbox-close" id="lightbox-close" aria-label="Cerrar imagen">✕</button>
+  <img id="lightbox-img" src="" alt="Imagen ampliada">
+</div>
+
+
+<!-- ============================================================
+     🔔 TOAST CONTAINER
+     ============================================================ -->
+<div id="toast-container" class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+
+<!-- ============================================================
+     🚀 APP SCRIPT (ES Module)
+     ============================================================ -->
+<script type="module" src="app.js"></script>
+
+</body>
+</html>
