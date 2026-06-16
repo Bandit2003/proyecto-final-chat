@@ -1,6 +1,6 @@
 /**
  * ChatFlow — app.js
- * Firebase v10 + Socket.io — Autenticación, Salas, Mensajes, Multimedia
+ * Firebase v10 Modular — Auth, Firestore, Storage, Emojis, Audio, Archivos
  */
 
 // ============================================================
@@ -26,8 +26,7 @@ import {
   limit,
   serverTimestamp,
   doc,
-  setDoc,
-  getDoc
+  setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import {
   getStorage,
@@ -37,11 +36,10 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
 // ============================================================
-// 🔧 FIREBASE CONFIG — edita firebase-config.js con tus datos
+// 🔧 FIREBASE CONFIG
 // ============================================================
 import { firebaseConfig } from './firebase-config.js';
 
-// Init Firebase
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
 const db          = getFirestore(firebaseApp);
@@ -122,15 +120,15 @@ const COUNTRIES = [
 let currentUser       = null;
 let currentRoomId     = null;
 let currentRoomName   = null;
-let unsubMessages     = null; // Firestore message listener unsubscribe fn
-let unsubRooms        = null; // Firestore rooms listener unsubscribe fn
+let unsubMessages     = null;
+let unsubRooms        = null;
 let pendingFile       = null; // { file, type: 'image'|'file' }
 let isRecording       = false;
 let mediaRecorder     = null;
 let audioChunks       = [];
 let recordingInterval = null;
 let recordingSeconds  = 0;
-let lastMsgSenderId   = null; // for grouping consecutive messages
+let lastMsgSenderId   = null;
 
 // ============================================================
 // 📍 DOM REFERENCES
@@ -157,29 +155,28 @@ const countrySelect     = document.getElementById('country-code-select');
 const regBirthday       = document.getElementById('reg-birthday');
 const regAvatar         = document.getElementById('reg-avatar');
 const avatarPreview     = document.getElementById('avatar-preview-wrapper');
-const avatarPlaceholder = document.getElementById('avatar-placeholder-icon');
 const registerError     = document.getElementById('register-error');
 const registerSubmitBtn = document.getElementById('register-submit-btn');
 
 // Sidebar
-const sidebarEl      = document.getElementById('sidebar');
-const sidebarAvatar  = document.getElementById('sidebar-avatar');
+const sidebarEl        = document.getElementById('sidebar');
+const sidebarAvatar    = document.getElementById('sidebar-avatar');
 const sidebarAvatarTxt = document.getElementById('sidebar-avatar-text');
-const sidebarName    = document.getElementById('sidebar-username');
-const logoutBtn      = document.getElementById('logout-btn');
-const roomsList      = document.getElementById('rooms-list');
-const createRoomBtn  = document.getElementById('create-room-btn');
+const sidebarName      = document.getElementById('sidebar-username');
+const logoutBtn        = document.getElementById('logout-btn');
+const roomsList        = document.getElementById('rooms-list');
+const createRoomBtn    = document.getElementById('create-room-btn');
 const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
-const sidebarOverlay = document.getElementById('sidebar-overlay');
+const sidebarOverlay   = document.getElementById('sidebar-overlay');
 
 // Main Chat
-const welcomeScreen   = document.getElementById('welcome-screen');
-const chatRoomArea    = document.getElementById('chat-room-area');
-const messagesEl      = document.getElementById('messages-container');
+const welcomeScreen     = document.getElementById('welcome-screen');
+const chatRoomArea      = document.getElementById('chat-room-area');
+const messagesEl        = document.getElementById('messages-container');
 const currentRoomNameEl = document.getElementById('current-room-name');
 const currentRoomDescEl = document.getElementById('current-room-desc');
-const headerRoomIcon  = document.getElementById('header-room-icon');
-const welcomeCreateBtn = document.getElementById('welcome-create-btn');
+const headerRoomIcon    = document.getElementById('header-room-icon');
+const welcomeCreateBtn  = document.getElementById('welcome-create-btn');
 
 // Input
 const messageInput    = document.getElementById('message-input');
@@ -207,11 +204,11 @@ const uploadPercent   = document.getElementById('upload-percent');
 const uploadLabel     = document.getElementById('upload-label');
 
 // Modal
-const createRoomModal = document.getElementById('create-room-modal');
-const createRoomForm  = document.getElementById('create-room-form');
-const roomNameInput   = document.getElementById('room-name-input');
-const roomDescInput   = document.getElementById('room-desc-input');
-const cancelRoomBtn   = document.getElementById('cancel-room-btn');
+const createRoomModal   = document.getElementById('create-room-modal');
+const createRoomForm    = document.getElementById('create-room-form');
+const roomNameInput     = document.getElementById('room-name-input');
+const roomDescInput     = document.getElementById('room-desc-input');
+const cancelRoomBtn     = document.getElementById('cancel-room-btn');
 const radioPublicLabel  = document.getElementById('radio-public-label');
 const radioPrivateLabel = document.getElementById('radio-private-label');
 
@@ -224,7 +221,7 @@ const lightboxClose = document.getElementById('lightbox-close');
 const toastContainer = document.getElementById('toast-container');
 
 // ============================================================
-// 🌍 COUNTRY CODES INIT
+// 🌍 POPULATE COUNTRY CODES
 // ============================================================
 function populateCountryCodes() {
   COUNTRIES.forEach(c => {
@@ -233,7 +230,6 @@ function populateCountryCodes() {
     opt.textContent = `${c.flag} ${c.name} (${c.code})`;
     countrySelect.appendChild(opt);
   });
-  // Default: select Venezuela
   const veIdx = COUNTRIES.findIndex(c => c.name === 'Venezuela');
   if (veIdx >= 0) countrySelect.selectedIndex = veIdx;
 }
@@ -262,9 +258,8 @@ async function enterChat(user) {
   authScreen.style.display = 'none';
   chatScreen.style.display = 'flex';
 
-  // Update sidebar user info
   const displayName = user.displayName || user.email.split('@')[0];
-  sidebarName.textContent = displayName;
+  sidebarName.textContent    = displayName;
   sidebarAvatarTxt.textContent = displayName.charAt(0).toUpperCase();
 
   if (user.photoURL) {
@@ -275,7 +270,6 @@ async function enterChat(user) {
     sidebarAvatar.appendChild(img);
   }
 
-  // Load rooms
   loadRooms();
 }
 
@@ -306,15 +300,10 @@ function clearErrors() {
 // Toggle password visibility
 document.querySelectorAll('.toggle-pwd-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    const targetId = btn.dataset.target;
-    const input = document.getElementById(targetId);
-    if (input.type === 'password') {
-      input.type = 'text';
-      btn.textContent = '🙈';
-    } else {
-      input.type = 'password';
-      btn.textContent = '👁️';
-    }
+    const input = document.getElementById(btn.dataset.target);
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+    btn.textContent = input.type === 'password' ? '👁️' : '🙈';
   });
 });
 
@@ -330,7 +319,6 @@ loginForm.addEventListener('submit', async (e) => {
   setLoading(loginSubmitBtn, true);
   try {
     await signInWithEmailAndPassword(auth, email, pwd);
-    // onAuthStateChanged handles navigation
   } catch (err) {
     showAuthError(loginError, translateAuthError(err.code));
     setLoading(loginSubmitBtn, false);
@@ -369,7 +357,6 @@ registerForm.addEventListener('submit', async (e) => {
   const countryCode = countrySelect.value;
   const birthday   = regBirthday.value;
 
-  // Validations
   if (!name || !username || !email || !pwd || !confirmPwd) {
     return showAuthError(registerError, 'Completa todos los campos obligatorios (*).');
   }
@@ -383,11 +370,9 @@ registerForm.addEventListener('submit', async (e) => {
   setLoading(registerSubmitBtn, true);
 
   try {
-    // Create user in Firebase Auth
     const cred = await createUserWithEmailAndPassword(auth, email, pwd);
     const user = cred.user;
 
-    // Upload avatar if selected
     let photoURL = '';
     if (regAvatar.files[0]) {
       try {
@@ -395,16 +380,14 @@ registerForm.addEventListener('submit', async (e) => {
           regAvatar.files[0],
           `avatars/${user.uid}/avatar`
         );
-      } catch (_) { /* avatar upload failure is non-fatal */ }
+      } catch (_) { /* non-fatal */ }
     }
 
-    // Update Firebase Auth profile
     await updateProfile(user, {
       displayName: name,
       photoURL: photoURL || ''
     });
 
-    // Save extended profile in Firestore
     await setDoc(doc(db, 'users', user.uid), {
       uid:         user.uid,
       displayName: name,
@@ -416,7 +399,7 @@ registerForm.addEventListener('submit', async (e) => {
       createdAt:   serverTimestamp()
     });
 
-    // onAuthStateChanged will trigger enterChat
+    // onAuthStateChanged triggers enterChat automatically
   } catch (err) {
     showAuthError(registerError, translateAuthError(err.code));
     setLoading(registerSubmitBtn, false);
@@ -430,22 +413,24 @@ logoutBtn.addEventListener('click', async () => {
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
   if (unsubRooms)    { unsubRooms();    unsubRooms = null; }
   currentRoomId = null;
+  welcomeScreen.style.display  = 'flex';
+  chatRoomArea.style.display   = 'none';
   await signOut(auth);
 });
 
 // ============================================================
-// 🖼️ AVATAR PREVIEW (register form)
+// 🖼️ AVATAR PREVIEW
 // ============================================================
 regAvatar.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) {
-    showToast('❌ La foto de perfil no puede superar los 5MB.', 'error');
+    showToast('❌ La foto no puede superar los 5MB.', 'error');
     return;
   }
   const reader = new FileReader();
   reader.onload = (ev) => {
-    avatarPreview.innerHTML = `<img src="${ev.target.result}" alt="Vista previa">`;
+    avatarPreview.innerHTML = `<img src="${ev.target.result}" alt="Vista previa" style="width:100%;height:100%;object-fit:cover;">`;
   };
   reader.readAsDataURL(file);
 });
@@ -453,10 +438,10 @@ regAvatar.addEventListener('change', (e) => {
 avatarPreview.addEventListener('click', () => regAvatar.click());
 
 // ============================================================
-// 🏠 ROOMS — Load real-time from Firestore
+// 🏠 ROOMS — Real-time Firestore
 // ============================================================
 function loadRooms() {
-  if (unsubRooms) { unsubRooms(); }
+  if (unsubRooms) unsubRooms();
 
   const q = query(collection(db, 'rooms'), orderBy('createdAt', 'asc'));
 
@@ -488,7 +473,6 @@ function loadRooms() {
 
       item.addEventListener('click', () => {
         selectRoom(room.id, room.name, room.description || '', room.type);
-        // Close sidebar on mobile
         closeSidebarMobile();
       });
 
@@ -502,45 +486,40 @@ function loadRooms() {
       roomsList.appendChild(item);
     });
   }, (err) => {
-    console.error('Error loading rooms:', err);
-    showToast('Error al cargar las salas.', 'error');
+    console.error('Error cargando salas:', err);
+    showToast('Error al cargar las salas. Verifica Firebase.', 'error');
   });
 }
 
 // ============================================================
-// 🚀 SELECT ROOM — Load messages
+// 🚀 SELECT ROOM
 // ============================================================
 function selectRoom(roomId, name, desc, type) {
   if (currentRoomId === roomId) return;
 
-  // Unsubscribe from previous room messages
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
 
   currentRoomId   = roomId;
   currentRoomName = name;
   lastMsgSenderId = null;
 
-  // Update UI
   welcomeScreen.style.display  = 'none';
   chatRoomArea.style.display   = 'flex';
   currentRoomNameEl.textContent = name;
   currentRoomDescEl.textContent = desc || 'Sala de chat';
   headerRoomIcon.textContent    = type === 'private' ? '🔒' : '#';
-  messagesEl.querySelector('.messages-start-spacer').after(); // clear
 
-  // Mark active room
+  // Highlight active room
   document.querySelectorAll('.room-item').forEach(el => {
     el.classList.toggle('active', el.dataset.roomId === roomId);
   });
 
-  // Clear messages and load
+  // Clear messages (keep spacer)
   Array.from(messagesEl.children).forEach(el => {
     if (!el.classList.contains('messages-start-spacer')) el.remove();
   });
 
-  // Add system message
   appendSystemMsg(`Bienvenido a #${name}`);
-
   loadMessages(roomId);
 }
 
@@ -557,13 +536,12 @@ function loadMessages(roomId) {
   unsubMessages = onSnapshot(q, (snapshot) => {
     snapshot.docChanges().forEach(change => {
       if (change.type === 'added') {
-        const msg = { id: change.doc.id, ...change.doc.data() };
-        renderMessage(msg);
+        renderMessage({ id: change.doc.id, ...change.doc.data() });
       }
     });
     scrollToBottom();
   }, (err) => {
-    console.error('Error loading messages:', err);
+    console.error('Error cargando mensajes:', err);
   });
 }
 
@@ -598,24 +576,23 @@ function renderMessage(msg) {
     bodyEl.appendChild(senderEl);
   }
 
-  // Content depending on type
+  // Message content by type
   let contentEl;
 
   switch (msg.type) {
     case 'image': {
       contentEl = document.createElement('div');
       contentEl.className = 'msg-image msg-bubble';
-      contentEl.style.padding = '0';
-      contentEl.style.overflow = 'hidden';
+      contentEl.style.cssText = 'padding:0;overflow:hidden;cursor:zoom-in;';
       const img = document.createElement('img');
       img.src = msg.fileUrl;
       img.alt = 'Imagen enviada';
       img.loading = 'lazy';
+      img.style.cssText = 'width:100%;display:block;border-radius:inherit;';
       img.addEventListener('click', () => openLightbox(msg.fileUrl));
       contentEl.appendChild(img);
       break;
     }
-
     case 'file': {
       contentEl = document.createElement('a');
       contentEl.className = 'msg-file';
@@ -629,26 +606,24 @@ function renderMessage(msg) {
           <div class="file-name">${escapeHtml(msg.fileName || 'Archivo')}</div>
           <div class="file-size">${formatBytes(msg.fileSize || 0)}</div>
         </div>
-        <span aria-hidden="true" style="font-size:18px;color:var(--accent)">⬇️</span>
+        <span style="font-size:18px;color:var(--accent)">⬇️</span>
       `;
       break;
     }
-
     case 'audio': {
       contentEl = document.createElement('div');
       contentEl.className = 'msg-bubble msg-audio-player';
+      // Use both webm and ogg sources for compatibility
       contentEl.innerHTML = `
-        <span aria-hidden="true" style="font-size:20px;">🎙️</span>
-        <audio controls preload="metadata" aria-label="Nota de audio">
-          <source src="${msg.fileUrl}" type="audio/webm">
-          Tu navegador no soporta audio.
+        <span style="font-size:20px;">🎙️</span>
+        <audio controls preload="metadata" aria-label="Nota de audio" style="flex:1;height:32px;">
+          <source src="${msg.fileUrl}" type="${msg.mimeType || 'audio/webm'}">
+          Tu navegador no soporta la reproducción de audio.
         </audio>
       `;
       break;
     }
-
     default: {
-      // text / emoji
       contentEl = document.createElement('div');
       contentEl.className = 'msg-bubble';
       contentEl.textContent = msg.content || '';
@@ -676,16 +651,24 @@ function appendSystemMsg(text) {
   messagesEl.appendChild(el);
 }
 
-function scrollToBottom(smooth = true) {
-  messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+function scrollToBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 // ============================================================
-// ✉️ SEND TEXT MESSAGE
+// ✉️ UNIFIED SEND HANDLER — Text or File
 // ============================================================
-async function sendTextMessage() {
+async function handleSend() {
+  if (!currentRoomId) return;
+
+  // Priority: file > text
+  if (pendingFile) {
+    await sendFileMessage();
+    return;
+  }
+
   const content = messageInput.value.trim();
-  if (!content || !currentRoomId) return;
+  if (!content) return;
 
   messageInput.value = '';
   autoResizeTextarea();
@@ -707,16 +690,14 @@ async function sendTextMessage() {
   }
 }
 
-sendMsgBtn.addEventListener('click', sendTextMessage);
+// Single send button listener
+sendMsgBtn.addEventListener('click', handleSend);
 
+// Enter to send (Shift+Enter = new line)
 messageInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
-    if (pendingFile) {
-      sendFileMessage();
-    } else {
-      sendTextMessage();
-    }
+    handleSend();
   }
 });
 
@@ -728,20 +709,18 @@ function autoResizeTextarea() {
 messageInput.addEventListener('input', autoResizeTextarea);
 
 // ============================================================
-// 📁 FILE HANDLING — Photo & General Files
+// 📁 FILE HANDLING
 // ============================================================
 photoInput.addEventListener('change', (e) => handleFileSelected(e.target.files[0], 'image'));
 fileInput.addEventListener('change',  (e) => handleFileSelected(e.target.files[0], 'file'));
 
 function handleFileSelected(file, type) {
   if (!file) return;
-
   const maxSize = type === 'image' ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
   if (file.size > maxSize) {
-    showToast(`❌ El archivo supera el tamaño máximo (${type === 'image' ? '10MB' : '25MB'}).`, 'error');
+    showToast(`❌ El archivo supera el límite (${type === 'image' ? '10MB' : '25MB'}).`, 'error');
     return;
   }
-
   pendingFile = { file, type };
   showFilePreviewBar(file, type);
 }
@@ -750,8 +729,8 @@ function showFilePreviewBar(file, type) {
   filePreviewBar.style.display = 'flex';
   fpName.textContent = file.name;
   fpSize.textContent = formatBytes(file.size);
+  fpIcon.innerHTML   = '';
 
-  fpIcon.innerHTML = '';
   if (type === 'image') {
     const thumb = document.createElement('img');
     thumb.className = 'file-preview-thumb';
@@ -769,12 +748,7 @@ cancelFileBtn.addEventListener('click', () => {
   pendingFile = null;
   filePreviewBar.style.display = 'none';
   photoInput.value = '';
-  fileInput.value = '';
-});
-
-// Send pending file when clicking send
-sendMsgBtn.addEventListener('click', () => {
-  if (pendingFile) { sendFileMessage(); }
+  fileInput.value  = '';
 });
 
 async function sendFileMessage() {
@@ -786,19 +760,14 @@ async function sendFileMessage() {
   photoInput.value = '';
   fileInput.value  = '';
 
-  const ext    = file.name.split('.').pop();
-  const path   = `rooms/${currentRoomId}/${type === 'image' ? 'images' : 'files'}/${Date.now()}_${file.name}`;
-
+  const path = `rooms/${currentRoomId}/${type === 'image' ? 'images' : 'files'}/${Date.now()}_${file.name}`;
   showUploadIndicator(type === 'image' ? '📷 Subiendo imagen…' : '📎 Subiendo archivo…');
 
   try {
-    const fileUrl = await uploadFileToStorage(file, path, (progress) => {
-      updateUploadProgress(progress);
-    });
-
+    const fileUrl = await uploadFileToStorage(file, path, updateUploadProgress);
     hideUploadIndicator();
 
-    const msgData = {
+    await addDoc(collection(db, 'rooms', currentRoomId, 'messages'), {
       type:     type === 'image' ? 'image' : 'file',
       fileUrl,
       fileName: file.name,
@@ -810,9 +779,7 @@ async function sendFileMessage() {
         photoURL:    currentUser.photoURL || ''
       },
       timestamp: serverTimestamp()
-    };
-
-    await addDoc(collection(db, 'rooms', currentRoomId, 'messages'), msgData);
+    });
   } catch (err) {
     hideUploadIndicator();
     showToast('❌ Error al subir el archivo.', 'error');
@@ -836,33 +803,29 @@ async function startRecording() {
     showToast('❌ Tu navegador no soporta grabación de audio.', 'error');
     return;
   }
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedAudioMime() });
-    audioChunks = [];
+    audioChunks   = [];
 
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunks.push(e.data);
     };
 
-    mediaRecorder.start(200); // collect data every 200ms
-    isRecording = true;
+    mediaRecorder.start(200);
+    isRecording    = true;
     recordingSeconds = 0;
 
-    // UI
     audioRecordBtn.classList.add('recording-active');
     audioRecordBtn.setAttribute('aria-pressed', 'true');
     recordingBar.style.display = 'flex';
-    recordingTime.textContent = '0:00';
+    recordingTime.textContent  = '0:00';
 
     recordingInterval = setInterval(() => {
       recordingSeconds++;
       const m = Math.floor(recordingSeconds / 60);
       const s = recordingSeconds % 60;
-      recordingTime.textContent = `${m}:${s.toString().padStart(2, '0')}`;
-
-      // Auto stop after 5 min
+      recordingTime.textContent = `${m}:${String(s).padStart(2, '0')}`;
       if (recordingSeconds >= 300) stopRecording();
     }, 1000);
 
@@ -874,15 +837,12 @@ async function startRecording() {
 
 function stopRecording() {
   if (!mediaRecorder || !isRecording) return;
-
   clearInterval(recordingInterval);
   isRecording = false;
   audioRecordBtn.classList.remove('recording-active');
   audioRecordBtn.setAttribute('aria-pressed', 'false');
-
   mediaRecorder.stop();
   mediaRecorder.stream.getTracks().forEach(t => t.stop());
-  // sendAudio is handled by send button
 }
 
 function cancelRecording() {
@@ -891,8 +851,9 @@ function cancelRecording() {
     mediaRecorder.stream.getTracks().forEach(t => t.stop());
   }
   clearInterval(recordingInterval);
-  isRecording = false;
-  audioChunks = [];
+  isRecording  = false;
+  audioChunks  = [];
+  mediaRecorder = null;
   recordingBar.style.display = 'none';
   audioRecordBtn.classList.remove('recording-active');
   audioRecordBtn.setAttribute('aria-pressed', 'false');
@@ -902,19 +863,20 @@ cancelAudioBtn.addEventListener('click', cancelRecording);
 
 sendAudioBtn.addEventListener('click', async () => {
   stopRecording();
-  // small delay to let MediaRecorder finish
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 350));
 
   if (!audioChunks.length || !currentRoomId) {
     recordingBar.style.display = 'none';
+    audioChunks = [];
     return;
   }
 
   recordingBar.style.display = 'none';
   const mimeType = getSupportedAudioMime();
   const blob = new Blob(audioChunks, { type: mimeType });
-  const ext  = mimeType.includes('webm') ? 'webm' : 'ogg';
-  audioChunks = [];
+  const ext  = mimeType.includes('ogg') ? 'ogg' : 'webm';
+  audioChunks  = [];
+  mediaRecorder = null;
 
   const path = `rooms/${currentRoomId}/audios/${Date.now()}.${ext}`;
   showUploadIndicator('🎙️ Enviando audio…');
@@ -922,7 +884,6 @@ sendAudioBtn.addEventListener('click', async () => {
   try {
     const fileUrl = await uploadFileToStorage(blob, path, updateUploadProgress);
     hideUploadIndicator();
-
     await addDoc(collection(db, 'rooms', currentRoomId, 'messages'), {
       type:      'audio',
       fileUrl,
@@ -943,7 +904,12 @@ sendAudioBtn.addEventListener('click', async () => {
 });
 
 function getSupportedAudioMime() {
-  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/ogg'
+  ];
   return types.find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
 }
 
@@ -952,8 +918,8 @@ function getSupportedAudioMime() {
 // ============================================================
 function uploadFileToStorage(file, path, onProgress) {
   return new Promise((resolve, reject) => {
-    const sRef    = storageRef(storage, path);
-    const task    = uploadBytesResumable(sRef, file);
+    const sRef = storageRef(storage, path);
+    const task = uploadBytesResumable(sRef, file);
 
     task.on('state_changed',
       (snapshot) => {
@@ -971,9 +937,9 @@ function uploadFileToStorage(file, path, onProgress) {
 
 function showUploadIndicator(label) {
   uploadIndicator.style.display = 'flex';
-  uploadLabel.textContent = label;
-  uploadBarFill.style.width = '0%';
-  uploadPercent.textContent = '0%';
+  uploadLabel.textContent       = label;
+  uploadBarFill.style.width     = '0%';
+  uploadPercent.textContent     = '0%';
 }
 
 function updateUploadProgress(pct) {
@@ -998,15 +964,15 @@ emojiBtn.addEventListener('click', (e) => {
 
 emojiPicker.addEventListener('emoji-click', (e) => {
   const emoji = e.detail.unicode;
-  const pos   = messageInput.selectionStart;
+  const pos   = messageInput.selectionStart || messageInput.value.length;
   const val   = messageInput.value;
   messageInput.value = val.slice(0, pos) + emoji + val.slice(pos);
-  messageInput.selectionStart = messageInput.selectionEnd = pos + emoji.length;
+  const newPos = pos + emoji.length;
+  messageInput.setSelectionRange(newPos, newPos);
   messageInput.focus();
   autoResizeTextarea();
 });
 
-// Close picker on outside click
 document.addEventListener('click', (e) => {
   if (!emojiPickerWrap.contains(e.target) && e.target !== emojiBtn) {
     emojiPickerWrap.style.display = 'none';
@@ -1025,7 +991,7 @@ function openCreateRoomModal() {
   document.querySelector('input[name="room-type"][value="public"]').checked = true;
   radioPublicLabel.classList.add('selected');
   radioPrivateLabel.classList.remove('selected');
-  roomNameInput.focus();
+  setTimeout(() => roomNameInput.focus(), 50);
 }
 
 function closeCreateRoomModal() {
@@ -1034,18 +1000,15 @@ function closeCreateRoomModal() {
 
 createRoomBtn.addEventListener('click', openCreateRoomModal);
 welcomeCreateBtn.addEventListener('click', openCreateRoomModal);
-welcomeScreen.querySelector && document.getElementById('welcome-create-btn')?.addEventListener('click', openCreateRoomModal);
 cancelRoomBtn.addEventListener('click', closeCreateRoomModal);
 
-// Close on overlay click
 createRoomModal.querySelector('.modal-overlay').addEventListener('click', (e) => {
   if (e.target === createRoomModal.querySelector('.modal-overlay')) closeCreateRoomModal();
 });
 
-// Radio style toggle
 document.querySelectorAll('input[name="room-type"]').forEach(radio => {
   radio.addEventListener('change', () => {
-    radioPublicLabel.classList.toggle('selected', radio.value === 'public');
+    radioPublicLabel.classList.toggle('selected',  radio.value === 'public');
     radioPrivateLabel.classList.toggle('selected', radio.value === 'private');
   });
 });
@@ -1055,12 +1018,11 @@ createRoomForm.addEventListener('submit', async (e) => {
   const name = roomNameInput.value.trim();
   const desc = roomDescInput.value.trim();
   const type = document.querySelector('input[name="room-type"]:checked').value;
-
   if (!name) return;
 
-  const submitBtn = createRoomForm.querySelector('.btn-primary');
+  const submitBtn = document.getElementById('create-room-submit-btn');
   submitBtn.disabled = true;
-  submitBtn.innerHTML = '<span class="spinner"></span>';
+  submitBtn.innerHTML = '<span class="spinner"></span> Creando…';
 
   try {
     const docRef = await addDoc(collection(db, 'rooms'), {
@@ -1070,16 +1032,15 @@ createRoomForm.addEventListener('submit', async (e) => {
       createdBy:  currentUser.uid,
       createdAt:  serverTimestamp()
     });
-
     closeCreateRoomModal();
     selectRoom(docRef.id, name, desc, type);
     showToast(`✅ Sala "${name}" creada con éxito.`, 'success');
   } catch (err) {
-    showToast('❌ Error al crear la sala.', 'error');
+    showToast('❌ Error al crear la sala. Verifica Firebase.', 'error');
     console.error(err);
   } finally {
     submitBtn.disabled = false;
-    submitBtn.innerHTML = 'Crear Sala';
+    submitBtn.textContent = 'Crear Sala';
   }
 });
 
@@ -1099,23 +1060,34 @@ function closeLightbox() {
 }
 
 lightboxClose.addEventListener('click', closeLightbox);
-lightbox.addEventListener('click', (e) => { if (e.target === lightbox || e.target === lightboxImg) closeLightbox(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+lightbox.addEventListener('click', (e) => {
+  if (e.target === lightbox || e.target === lightboxImg) closeLightbox();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeLightbox();
+    closeCreateRoomModal();
+  }
+});
 
 // ============================================================
-// 📱 MOBILE SIDEBAR TOGGLE
+// 📱 MOBILE SIDEBAR
 // ============================================================
 function checkMobileLayout() {
   const isMobile = window.innerWidth <= 768;
-  toggleSidebarBtn.style.display = isMobile ? 'flex' : 'none';
+  if (toggleSidebarBtn) toggleSidebarBtn.style.display = isMobile ? 'flex' : 'none';
 }
 
-toggleSidebarBtn.addEventListener('click', () => {
-  sidebarEl.classList.toggle('open');
-  sidebarOverlay.classList.toggle('show');
-});
+if (toggleSidebarBtn) {
+  toggleSidebarBtn.addEventListener('click', () => {
+    sidebarEl.classList.toggle('open');
+    sidebarOverlay.classList.toggle('show');
+  });
+}
 
-sidebarOverlay.addEventListener('click', closeSidebarMobile);
+if (sidebarOverlay) {
+  sidebarOverlay.addEventListener('click', closeSidebarMobile);
+}
 
 function closeSidebarMobile() {
   sidebarEl.classList.remove('open');
@@ -1131,18 +1103,17 @@ function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-  toast.innerHTML = `<span aria-hidden="true">${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
+  toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
   toastContainer.appendChild(toast);
-
   setTimeout(() => {
     toast.style.transition = 'opacity 0.3s ease';
-    toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 300);
+    toast.style.opacity    = '0';
+    setTimeout(() => toast.remove(), 350);
   }, 4000);
 }
 
 // ============================================================
-// 🛠️ UTILITY FUNCTIONS
+// 🛠️ UTILITIES
 // ============================================================
 function showAuthError(el, msg) {
   el.textContent = msg;
@@ -1151,62 +1122,66 @@ function showAuthError(el, msg) {
 
 function setLoading(btn, loading) {
   if (loading) {
-    btn.dataset.origText = btn.innerHTML;
+    btn.dataset.origHtml = btn.innerHTML;
     btn.classList.add('loading');
     btn.innerHTML = '<span class="spinner"></span><span>Cargando…</span>';
   } else {
     btn.classList.remove('loading');
-    btn.innerHTML = btn.dataset.origText || btn.innerHTML;
+    btn.innerHTML = btn.dataset.origHtml || btn.innerHTML;
   }
 }
 
 function translateAuthError(code) {
   const map = {
-    'auth/invalid-email':            'El correo electrónico no es válido.',
-    'auth/user-disabled':            'Esta cuenta ha sido deshabilitada.',
-    'auth/user-not-found':           'No existe una cuenta con ese correo.',
-    'auth/wrong-password':           'Contraseña incorrecta.',
-    'auth/email-already-in-use':     'Ya existe una cuenta con ese correo electrónico.',
-    'auth/weak-password':            'La contraseña es demasiado débil. Usa al menos 6 caracteres.',
-    'auth/too-many-requests':        'Demasiados intentos. Intenta de nuevo más tarde.',
-    'auth/network-request-failed':   'Error de conexión. Verifica tu internet.',
-    'auth/invalid-credential':       'Credenciales incorrectas. Verifica tu correo y contraseña.',
-    'auth/operation-not-allowed':    'Este método de acceso no está habilitado.',
+    'auth/invalid-email':          'El correo electrónico no es válido.',
+    'auth/user-disabled':          'Esta cuenta ha sido deshabilitada.',
+    'auth/user-not-found':         'No existe una cuenta con ese correo.',
+    'auth/wrong-password':         'Contraseña incorrecta.',
+    'auth/email-already-in-use':   'Ya existe una cuenta con ese correo electrónico.',
+    'auth/weak-password':          'La contraseña es demasiado débil (mínimo 6 caracteres).',
+    'auth/too-many-requests':      'Demasiados intentos fallidos. Intenta más tarde.',
+    'auth/network-request-failed': 'Error de red. Verifica tu conexión a internet.',
+    'auth/invalid-credential':     'Correo o contraseña incorrectos.',
+    'auth/operation-not-allowed':  'Este método de acceso no está habilitado en Firebase.',
+    'auth/popup-closed-by-user':   'Proceso cancelado.',
   };
-  return map[code] || `Error: ${code}`;
+  return map[code] || `Error (${code}). Intenta de nuevo.`;
 }
 
 function formatTimestamp(ts) {
   if (!ts) return '';
-  const date = ts.toDate ? ts.toDate() : new Date(ts);
-  return date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  try {
+    const date = ts.toDate ? ts.toDate() : new Date(ts);
+    return date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
 }
 
 function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
+  if (!bytes || bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-function getFileIcon(mimeType) {
-  if (!mimeType) return '📄';
-  if (mimeType.startsWith('image/'))       return '🖼️';
-  if (mimeType.startsWith('video/'))       return '🎬';
-  if (mimeType.startsWith('audio/'))       return '🎵';
-  if (mimeType.includes('pdf'))            return '📕';
+function getFileIcon(mimeType = '') {
+  if (mimeType.startsWith('image/'))        return '🖼️';
+  if (mimeType.startsWith('video/'))        return '🎬';
+  if (mimeType.startsWith('audio/'))        return '🎵';
+  if (mimeType.includes('pdf'))             return '📕';
   if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
   if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
   if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return '📊';
   if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return '📦';
-  if (mimeType.includes('text/'))          return '📃';
+  if (mimeType.includes('text/'))           return '📃';
   return '📄';
 }
 
 function escapeHtml(str) {
   const div = document.createElement('div');
-  div.textContent = str;
+  div.textContent = str || '';
   return div.innerHTML;
 }
 
@@ -1216,9 +1191,7 @@ function escapeHtml(str) {
 function init() {
   populateCountryCodes();
   checkMobileLayout();
-
-  // Start with login tab visible
-  loginForm.style.display = 'flex';
+  loginForm.style.display    = 'flex';
   registerForm.style.display = 'none';
 }
 

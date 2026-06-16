@@ -1,0 +1,42 @@
+name: 🚀 Deploy ChatFlow to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissions needed for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: 📦 Upload public/ as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Deploy only the contents of the public/ folder
+          path: './public'
+
+      - name: 🌐 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
