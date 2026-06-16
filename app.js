@@ -1,6 +1,6 @@
 /**
  * ChatFlow — app.js
- * Firebase v10 Modular — Auth, Firestore, Storage, Emojis, Audio, Archivos
+ * Firebase v10 Modular — Auth, Firestore | Cloudinary — Storage (gratis)
  */
 
 // ============================================================
@@ -28,22 +28,17 @@ import {
   doc,
   setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytesResumable,
-  getDownloadURL
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+// ☁️ Firebase Storage eliminado — usando Cloudinary (gratuito)
 
 // ============================================================
 // 🔧 FIREBASE CONFIG
 // ============================================================
-import { firebaseConfig } from './firebase-config.js';
+import { firebaseConfig, cloudinaryConfig } from './firebase-config.js';
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
 const db          = getFirestore(firebaseApp);
-const storage     = getStorage(firebaseApp);
+// Firebase Storage no usado — reemplazado por Cloudinary
 
 // ============================================================
 // 🌎 COUNTRY CODES (phone selector)
@@ -914,24 +909,49 @@ function getSupportedAudioMime() {
 }
 
 // ============================================================
-// ☁️ UPLOAD TO FIREBASE STORAGE
+// ☁️ UPLOAD TO CLOUDINARY (100% gratuito — sin tarjeta)
 // ============================================================
 function uploadFileToStorage(file, path, onProgress) {
   return new Promise((resolve, reject) => {
-    const sRef = storageRef(storage, path);
-    const task = uploadBytesResumable(sRef, file);
 
-    task.on('state_changed',
-      (snapshot) => {
-        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        if (onProgress) onProgress(pct);
-      },
-      (err) => reject(err),
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        resolve(url);
+    // Verifica que Cloudinary esté configurado
+    if (!cloudinaryConfig.cloudName || cloudinaryConfig.cloudName === 'TU_CLOUD_NAME_AQUI') {
+      reject(new Error('Cloudinary no configurado. Agrega tu cloudName y uploadPreset en firebase-config.js'));
+      return;
+    }
+
+    const folder = path.split('/').slice(0, -1).join('/');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', cloudinaryConfig.uploadPreset);
+    formData.append('folder', `chatflow/${folder}`);
+
+    const xhr = new XMLHttpRequest();
+    const endpoint = `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/upload`;
+    xhr.open('POST', endpoint, true);
+
+    // Progreso real de subida
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
       }
-    );
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText);
+        if (data.error) {
+          reject(new Error(data.error.message));
+        } else {
+          resolve(data.secure_url);
+        }
+      } else {
+        reject(new Error(`Error Cloudinary: ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Error de red al subir a Cloudinary'));
+    xhr.send(formData);
   });
 }
 
