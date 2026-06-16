@@ -1,12 +1,13 @@
 /**
  * ChatFlow — app.js
- * Firebase v10 Modular — Auth, Firestore | Cloudinary — Storage (gratis)
+ * Firebase Auth + Firestore | Cloudinary Storage (gratuito)
  */
 
 // ============================================================
-// 🔥 FIREBASE IMPORTS (CDN — Modular v10)
+// 🔥 FIREBASE IMPORTS — Solo Auth y Firestore (ambos GRATIS)
 // ============================================================
-import { initializeApp }                     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -16,6 +17,7 @@ import {
   updateProfile,
   onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
 import {
   getFirestore,
   collection,
@@ -28,132 +30,127 @@ import {
   doc,
   setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-// ☁️ Firebase Storage eliminado — usando Cloudinary (gratuito)
 
 // ============================================================
-// 🔧 FIREBASE CONFIG
+// ⚙️ CONFIG
 // ============================================================
 import { firebaseConfig, cloudinaryConfig } from './firebase-config.js';
 
-const firebaseApp = initializeApp(firebaseConfig);
-const auth        = getAuth(firebaseApp);
-const db          = getFirestore(firebaseApp);
-// Firebase Storage no usado — reemplazado por Cloudinary
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
 
 // ============================================================
-// 🌎 COUNTRY CODES (phone selector)
+// 🌎 CÓDIGOS DE PAÍS
 // ============================================================
 const COUNTRIES = [
-  { flag:'🇦🇷', name:'Argentina',             code:'+54'  },
-  { flag:'🇦🇺', name:'Australia',              code:'+61'  },
-  { flag:'🇦🇹', name:'Austria',               code:'+43'  },
-  { flag:'🇧🇪', name:'Bélgica',               code:'+32'  },
-  { flag:'🇧🇴', name:'Bolivia',               code:'+591' },
-  { flag:'🇧🇷', name:'Brasil',                code:'+55'  },
-  { flag:'🇨🇦', name:'Canadá',               code:'+1'   },
-  { flag:'🇨🇱', name:'Chile',                 code:'+56'  },
-  { flag:'🇨🇳', name:'China',                 code:'+86'  },
-  { flag:'🇨🇴', name:'Colombia',              code:'+57'  },
-  { flag:'🇰🇷', name:'Corea del Sur',         code:'+82'  },
-  { flag:'🇨🇷', name:'Costa Rica',            code:'+506' },
-  { flag:'🇨🇺', name:'Cuba',                  code:'+53'  },
-  { flag:'🇩🇰', name:'Dinamarca',             code:'+45'  },
-  { flag:'🇩🇴', name:'República Dominicana',  code:'+1809'},
-  { flag:'🇪🇨', name:'Ecuador',               code:'+593' },
-  { flag:'🇪🇬', name:'Egipto',                code:'+20'  },
-  { flag:'🇸🇻', name:'El Salvador',           code:'+503' },
-  { flag:'🇦🇪', name:'Emiratos Árabes',       code:'+971' },
-  { flag:'🇪🇸', name:'España',                code:'+34'  },
-  { flag:'🇺🇸', name:'Estados Unidos',        code:'+1'   },
-  { flag:'🇫🇮', name:'Finlandia',             code:'+358' },
-  { flag:'🇫🇷', name:'Francia',               code:'+33'  },
-  { flag:'🇬🇷', name:'Grecia',                code:'+30'  },
-  { flag:'🇬🇹', name:'Guatemala',             code:'+502' },
-  { flag:'🇭🇳', name:'Honduras',              code:'+504' },
-  { flag:'🇭🇺', name:'Hungría',               code:'+36'  },
-  { flag:'🇮🇳', name:'India',                 code:'+91'  },
-  { flag:'🇮🇩', name:'Indonesia',             code:'+62'  },
-  { flag:'🇮🇱', name:'Israel',                code:'+972' },
-  { flag:'🇮🇹', name:'Italia',                code:'+39'  },
-  { flag:'🇯🇵', name:'Japón',                 code:'+81'  },
-  { flag:'🇰🇪', name:'Kenia',                 code:'+254' },
-  { flag:'🇲🇾', name:'Malasia',               code:'+60'  },
-  { flag:'🇲🇽', name:'México',                code:'+52'  },
-  { flag:'🇳🇮', name:'Nicaragua',             code:'+505' },
-  { flag:'🇳🇬', name:'Nigeria',               code:'+234' },
-  { flag:'🇳🇴', name:'Noruega',               code:'+47'  },
-  { flag:'🇳🇿', name:'Nueva Zelanda',         code:'+64'  },
-  { flag:'🇵🇦', name:'Panamá',               code:'+507' },
-  { flag:'🇵🇾', name:'Paraguay',              code:'+595' },
-  { flag:'🇵🇪', name:'Perú',                  code:'+51'  },
-  { flag:'🇵🇭', name:'Filipinas',             code:'+63'  },
-  { flag:'🇵🇱', name:'Polonia',               code:'+48'  },
-  { flag:'🇵🇹', name:'Portugal',              code:'+351' },
-  { flag:'🇵🇷', name:'Puerto Rico',           code:'+1787'},
-  { flag:'🇬🇧', name:'Reino Unido',           code:'+44'  },
-  { flag:'🇨🇿', name:'Rep. Checa',            code:'+420' },
-  { flag:'🇷🇴', name:'Rumania',               code:'+40'  },
-  { flag:'🇷🇺', name:'Rusia',                 code:'+7'   },
-  { flag:'🇸🇦', name:'Arabia Saudita',        code:'+966' },
-  { flag:'🇸🇬', name:'Singapur',              code:'+65'  },
-  { flag:'🇿🇦', name:'Sudáfrica',             code:'+27'  },
-  { flag:'🇸🇪', name:'Suecia',                code:'+46'  },
-  { flag:'🇨🇭', name:'Suiza',                 code:'+41'  },
-  { flag:'🇹🇭', name:'Tailandia',             code:'+66'  },
-  { flag:'🇹🇷', name:'Turquía',               code:'+90'  },
-  { flag:'🇺🇦', name:'Ucrania',               code:'+380' },
-  { flag:'🇺🇾', name:'Uruguay',               code:'+598' },
-  { flag:'🇻🇪', name:'Venezuela',             code:'+58'  },
-  { flag:'🇻🇳', name:'Vietnam',               code:'+84'  },
-  { flag:'🇭🇹', name:'Haití',                 code:'+509' },
-  { flag:'🇳🇱', name:'Países Bajos',          code:'+31'  },
+  { flag:'🇦🇷', name:'Argentina',            code:'+54'  },
+  { flag:'🇦🇺', name:'Australia',             code:'+61'  },
+  { flag:'🇦🇹', name:'Austria',              code:'+43'  },
+  { flag:'🇧🇪', name:'Bélgica',              code:'+32'  },
+  { flag:'🇧🇴', name:'Bolivia',              code:'+591' },
+  { flag:'🇧🇷', name:'Brasil',               code:'+55'  },
+  { flag:'🇨🇦', name:'Canadá',              code:'+1'   },
+  { flag:'🇨🇱', name:'Chile',                code:'+56'  },
+  { flag:'🇨🇳', name:'China',                code:'+86'  },
+  { flag:'🇨🇴', name:'Colombia',             code:'+57'  },
+  { flag:'🇰🇷', name:'Corea del Sur',        code:'+82'  },
+  { flag:'🇨🇷', name:'Costa Rica',           code:'+506' },
+  { flag:'🇨🇺', name:'Cuba',                 code:'+53'  },
+  { flag:'🇩🇰', name:'Dinamarca',            code:'+45'  },
+  { flag:'🇩🇴', name:'Rep. Dominicana',      code:'+1809'},
+  { flag:'🇪🇨', name:'Ecuador',              code:'+593' },
+  { flag:'🇪🇬', name:'Egipto',               code:'+20'  },
+  { flag:'🇸🇻', name:'El Salvador',          code:'+503' },
+  { flag:'🇦🇪', name:'Emiratos Árabes',      code:'+971' },
+  { flag:'🇪🇸', name:'España',               code:'+34'  },
+  { flag:'🇺🇸', name:'Estados Unidos',       code:'+1'   },
+  { flag:'🇫🇮', name:'Finlandia',            code:'+358' },
+  { flag:'🇫🇷', name:'Francia',              code:'+33'  },
+  { flag:'🇬🇷', name:'Grecia',               code:'+30'  },
+  { flag:'🇬🇹', name:'Guatemala',            code:'+502' },
+  { flag:'🇭🇳', name:'Honduras',             code:'+504' },
+  { flag:'🇭🇺', name:'Hungría',              code:'+36'  },
+  { flag:'🇮🇳', name:'India',                code:'+91'  },
+  { flag:'🇮🇩', name:'Indonesia',            code:'+62'  },
+  { flag:'🇮🇱', name:'Israel',               code:'+972' },
+  { flag:'🇮🇹', name:'Italia',               code:'+39'  },
+  { flag:'🇯🇵', name:'Japón',                code:'+81'  },
+  { flag:'🇰🇪', name:'Kenia',                code:'+254' },
+  { flag:'🇲🇾', name:'Malasia',              code:'+60'  },
+  { flag:'🇲🇽', name:'México',               code:'+52'  },
+  { flag:'🇳🇮', name:'Nicaragua',            code:'+505' },
+  { flag:'🇳🇬', name:'Nigeria',              code:'+234' },
+  { flag:'🇳🇴', name:'Noruega',              code:'+47'  },
+  { flag:'🇳🇿', name:'Nueva Zelanda',        code:'+64'  },
+  { flag:'🇵🇦', name:'Panamá',              code:'+507' },
+  { flag:'🇵🇾', name:'Paraguay',             code:'+595' },
+  { flag:'🇵🇪', name:'Perú',                 code:'+51'  },
+  { flag:'🇵🇭', name:'Filipinas',            code:'+63'  },
+  { flag:'🇵🇱', name:'Polonia',              code:'+48'  },
+  { flag:'🇵🇹', name:'Portugal',             code:'+351' },
+  { flag:'🇵🇷', name:'Puerto Rico',          code:'+1787'},
+  { flag:'🇬🇧', name:'Reino Unido',          code:'+44'  },
+  { flag:'🇨🇿', name:'Rep. Checa',           code:'+420' },
+  { flag:'🇷🇴', name:'Rumania',              code:'+40'  },
+  { flag:'🇷🇺', name:'Rusia',                code:'+7'   },
+  { flag:'🇸🇦', name:'Arabia Saudita',       code:'+966' },
+  { flag:'🇸🇬', name:'Singapur',             code:'+65'  },
+  { flag:'🇿🇦', name:'Sudáfrica',            code:'+27'  },
+  { flag:'🇸🇪', name:'Suecia',               code:'+46'  },
+  { flag:'🇨🇭', name:'Suiza',                code:'+41'  },
+  { flag:'🇹🇭', name:'Tailandia',            code:'+66'  },
+  { flag:'🇹🇷', name:'Turquía',              code:'+90'  },
+  { flag:'🇺🇦', name:'Ucrania',              code:'+380' },
+  { flag:'🇺🇾', name:'Uruguay',              code:'+598' },
+  { flag:'🇻🇪', name:'Venezuela',            code:'+58'  },
+  { flag:'🇻🇳', name:'Vietnam',              code:'+84'  },
+  { flag:'🇭🇹', name:'Haití',                code:'+509' },
+  { flag:'🇳🇱', name:'Países Bajos',         code:'+31'  },
 ];
 
 // ============================================================
-// 📌 STATE
+// 📌 ESTADO GLOBAL
 // ============================================================
-let currentUser       = null;
-let currentRoomId     = null;
-let currentRoomName   = null;
-let unsubMessages     = null;
-let unsubRooms        = null;
-let pendingFile       = null; // { file, type: 'image'|'file' }
-let isRecording       = false;
-let mediaRecorder     = null;
-let audioChunks       = [];
-let recordingInterval = null;
-let recordingSeconds  = 0;
-let lastMsgSenderId   = null;
+let currentUser     = null;
+let currentRoomId   = null;
+let unsubMessages   = null;
+let unsubRooms      = null;
+let pendingFile     = null; // { file, type: 'image'|'file' }
+let isRecording     = false;
+let mediaRecorder   = null;
+let audioChunks     = [];
+let recInterval     = null;
+let recSeconds      = 0;
+let lastSenderId    = null;
 
 // ============================================================
-// 📍 DOM REFERENCES
+// 📍 REFERENCIAS DOM
 // ============================================================
-// Auth
-const authScreen        = document.getElementById('auth-screen');
-const chatScreen        = document.getElementById('chat-screen');
-const tabLogin          = document.getElementById('tab-login');
-const tabRegister       = document.getElementById('tab-register');
-const loginForm         = document.getElementById('login-form');
-const registerForm      = document.getElementById('register-form');
-const loginEmail        = document.getElementById('login-email');
-const loginPassword     = document.getElementById('login-password');
-const loginError        = document.getElementById('login-error');
-const loginSubmitBtn    = document.getElementById('login-submit-btn');
-const forgotBtn         = document.getElementById('forgot-password-btn');
-const regName           = document.getElementById('reg-name');
-const regUsername       = document.getElementById('reg-username');
-const regEmail          = document.getElementById('reg-email');
-const regPassword       = document.getElementById('reg-password');
-const regConfirmPwd     = document.getElementById('reg-confirm-password');
-const regPhone          = document.getElementById('reg-phone');
-const countrySelect     = document.getElementById('country-code-select');
-const regBirthday       = document.getElementById('reg-birthday');
-const regAvatar         = document.getElementById('reg-avatar');
-const avatarPreview     = document.getElementById('avatar-preview-wrapper');
-const registerError     = document.getElementById('register-error');
+const authScreen       = document.getElementById('auth-screen');
+const chatScreen       = document.getElementById('chat-screen');
+const tabLogin         = document.getElementById('tab-login');
+const tabRegister      = document.getElementById('tab-register');
+const loginForm        = document.getElementById('login-form');
+const registerForm     = document.getElementById('register-form');
+const loginEmail       = document.getElementById('login-email');
+const loginPassword    = document.getElementById('login-password');
+const loginError       = document.getElementById('login-error');
+const loginSubmitBtn   = document.getElementById('login-submit-btn');
+const forgotBtn        = document.getElementById('forgot-password-btn');
+const regName          = document.getElementById('reg-name');
+const regUsername      = document.getElementById('reg-username');
+const regEmail         = document.getElementById('reg-email');
+const regPassword      = document.getElementById('reg-password');
+const regConfirmPwd    = document.getElementById('reg-confirm-password');
+const regPhone         = document.getElementById('reg-phone');
+const countrySelect    = document.getElementById('country-code-select');
+const regBirthday      = document.getElementById('reg-birthday');
+const regAvatar        = document.getElementById('reg-avatar');
+const avatarPreview    = document.getElementById('avatar-preview-wrapper');
+const registerError    = document.getElementById('register-error');
 const registerSubmitBtn = document.getElementById('register-submit-btn');
 
-// Sidebar
 const sidebarEl        = document.getElementById('sidebar');
 const sidebarAvatar    = document.getElementById('sidebar-avatar');
 const sidebarAvatarTxt = document.getElementById('sidebar-avatar-text');
@@ -164,7 +161,6 @@ const createRoomBtn    = document.getElementById('create-room-btn');
 const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
 const sidebarOverlay   = document.getElementById('sidebar-overlay');
 
-// Main Chat
 const welcomeScreen     = document.getElementById('welcome-screen');
 const chatRoomArea      = document.getElementById('chat-room-area');
 const messagesEl        = document.getElementById('messages-container');
@@ -173,7 +169,6 @@ const currentRoomDescEl = document.getElementById('current-room-desc');
 const headerRoomIcon    = document.getElementById('header-room-icon');
 const welcomeCreateBtn  = document.getElementById('welcome-create-btn');
 
-// Input
 const messageInput    = document.getElementById('message-input');
 const sendMsgBtn      = document.getElementById('send-message-btn');
 const photoInput      = document.getElementById('photo-input');
@@ -183,7 +178,6 @@ const emojiPickerWrap = document.getElementById('emoji-picker-wrapper');
 const emojiPicker     = document.getElementById('emoji-picker');
 const audioRecordBtn  = document.getElementById('audio-record-btn');
 
-// Bars
 const filePreviewBar  = document.getElementById('file-preview-bar');
 const fpIcon          = document.getElementById('fp-icon');
 const fpName          = document.getElementById('fp-name');
@@ -198,7 +192,6 @@ const uploadBarFill   = document.getElementById('upload-bar-fill');
 const uploadPercent   = document.getElementById('upload-percent');
 const uploadLabel     = document.getElementById('upload-label');
 
-// Modal
 const createRoomModal   = document.getElementById('create-room-modal');
 const createRoomForm    = document.getElementById('create-room-form');
 const roomNameInput     = document.getElementById('room-name-input');
@@ -207,16 +200,13 @@ const cancelRoomBtn     = document.getElementById('cancel-room-btn');
 const radioPublicLabel  = document.getElementById('radio-public-label');
 const radioPrivateLabel = document.getElementById('radio-private-label');
 
-// Lightbox
 const lightbox      = document.getElementById('lightbox');
 const lightboxImg   = document.getElementById('lightbox-img');
 const lightboxClose = document.getElementById('lightbox-close');
-
-// Toast container
 const toastContainer = document.getElementById('toast-container');
 
 // ============================================================
-// 🌍 POPULATE COUNTRY CODES
+// 🌍 CÓDIGOS DE PAÍS — Inicializar select
 // ============================================================
 function populateCountryCodes() {
   COUNTRIES.forEach(c => {
@@ -230,7 +220,7 @@ function populateCountryCodes() {
 }
 
 // ============================================================
-// 🔐 AUTH — onAuthStateChanged
+// 🔐 AUTH — Escuchar cambios de sesión
 // ============================================================
 onAuthStateChanged(auth, async (user) => {
   if (user) {
@@ -238,11 +228,11 @@ onAuthStateChanged(auth, async (user) => {
     await enterChat(user);
   } else {
     currentUser = null;
-    showAuth();
+    showAuthScreen();
   }
 });
 
-function showAuth() {
+function showAuthScreen() {
   authScreen.style.display = 'flex';
   chatScreen.style.display = 'none';
   if (unsubRooms)    { unsubRooms();    unsubRooms = null; }
@@ -253,14 +243,14 @@ async function enterChat(user) {
   authScreen.style.display = 'none';
   chatScreen.style.display = 'flex';
 
-  const displayName = user.displayName || user.email.split('@')[0];
-  sidebarName.textContent    = displayName;
-  sidebarAvatarTxt.textContent = displayName.charAt(0).toUpperCase();
+  const name = user.displayName || user.email.split('@')[0];
+  sidebarName.textContent      = name;
+  sidebarAvatarTxt.textContent = name.charAt(0).toUpperCase();
 
   if (user.photoURL) {
     const img = document.createElement('img');
     img.src = user.photoURL;
-    img.alt = displayName;
+    img.alt = name;
     sidebarAvatar.innerHTML = '';
     sidebarAvatar.appendChild(img);
   }
@@ -269,12 +259,12 @@ async function enterChat(user) {
 }
 
 // ============================================================
-// 📝 AUTH — Tab switching
+// 📝 TABS Login / Register
 // ============================================================
 tabLogin.addEventListener('click', () => {
   tabLogin.classList.add('active');
   tabRegister.classList.remove('active');
-  loginForm.style.display = 'flex';
+  loginForm.style.display    = 'flex';
   registerForm.style.display = 'none';
   clearErrors();
 });
@@ -283,7 +273,7 @@ tabRegister.addEventListener('click', () => {
   tabRegister.classList.add('active');
   tabLogin.classList.remove('active');
   registerForm.style.display = 'flex';
-  loginForm.style.display = 'none';
+  loginForm.style.display    = 'none';
   clearErrors();
 });
 
@@ -292,7 +282,6 @@ function clearErrors() {
   registerError.classList.remove('show');
 }
 
-// Toggle password visibility
 document.querySelectorAll('.toggle-pwd-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const input = document.getElementById(btn.dataset.target);
@@ -321,24 +310,21 @@ loginForm.addEventListener('submit', async (e) => {
 });
 
 // ============================================================
-// 📬 FORGOT PASSWORD
+// 📬 OLVIDÉ CONTRASEÑA
 // ============================================================
 forgotBtn.addEventListener('click', async () => {
   const email = loginEmail.value.trim();
-  if (!email) {
-    showAuthError(loginError, 'Ingresa tu correo electrónico primero.');
-    return;
-  }
+  if (!email) return showAuthError(loginError, 'Ingresa tu correo primero.');
   try {
     await sendPasswordResetEmail(auth, email);
-    showToast('📧 Correo de restablecimiento enviado. Revisa tu bandeja de entrada.', 'success');
+    showToast('📧 Correo de recuperación enviado.', 'success');
   } catch (err) {
     showAuthError(loginError, translateAuthError(err.code));
   }
 });
 
 // ============================================================
-// 📝 REGISTER
+// 📝 REGISTRO
 // ============================================================
 registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -349,18 +335,14 @@ registerForm.addEventListener('submit', async (e) => {
   const pwd        = regPassword.value;
   const confirmPwd = regConfirmPwd.value;
   const phone      = regPhone.value.trim();
-  const countryCode = countrySelect.value;
   const birthday   = regBirthday.value;
 
-  if (!name || !username || !email || !pwd || !confirmPwd) {
+  if (!name || !username || !email || !pwd || !confirmPwd)
     return showAuthError(registerError, 'Completa todos los campos obligatorios (*).');
-  }
-  if (pwd !== confirmPwd) {
+  if (pwd !== confirmPwd)
     return showAuthError(registerError, 'Las contraseñas no coinciden.');
-  }
-  if (pwd.length < 6) {
+  if (pwd.length < 6)
     return showAuthError(registerError, 'La contraseña debe tener al menos 6 caracteres.');
-  }
 
   setLoading(registerSubmitBtn, true);
 
@@ -368,33 +350,27 @@ registerForm.addEventListener('submit', async (e) => {
     const cred = await createUserWithEmailAndPassword(auth, email, pwd);
     const user = cred.user;
 
+    // Subir avatar a Cloudinary si se seleccionó
     let photoURL = '';
     if (regAvatar.files[0]) {
       try {
-        photoURL = await uploadFileToStorage(
-          regAvatar.files[0],
-          `avatars/${user.uid}/avatar`
-        );
-      } catch (_) { /* non-fatal */ }
+        photoURL = await uploadToCloudinary(regAvatar.files[0], 'avatars');
+      } catch (_) { /* no fatal */ }
     }
 
-    await updateProfile(user, {
-      displayName: name,
-      photoURL: photoURL || ''
-    });
+    await updateProfile(user, { displayName: name, photoURL });
 
     await setDoc(doc(db, 'users', user.uid), {
       uid:         user.uid,
       displayName: name,
-      username:    username,
-      email:       email,
-      phone:       phone ? `${countryCode} ${phone}` : '',
-      birthday:    birthday || '',
-      photoURL:    photoURL || '',
-      createdAt:   serverTimestamp()
+      username,
+      email,
+      phone:    phone ? `${countrySelect.value} ${phone}` : '',
+      birthday: birthday || '',
+      photoURL: photoURL || '',
+      createdAt: serverTimestamp()
     });
 
-    // onAuthStateChanged triggers enterChat automatically
   } catch (err) {
     showAuthError(registerError, translateAuthError(err.code));
     setLoading(registerSubmitBtn, false);
@@ -408,95 +384,90 @@ logoutBtn.addEventListener('click', async () => {
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
   if (unsubRooms)    { unsubRooms();    unsubRooms = null; }
   currentRoomId = null;
-  welcomeScreen.style.display  = 'flex';
-  chatRoomArea.style.display   = 'none';
+  welcomeScreen.style.display = 'flex';
+  chatRoomArea.style.display  = 'none';
   await signOut(auth);
 });
 
 // ============================================================
-// 🖼️ AVATAR PREVIEW
+// 🖼️ PREVIEW DE AVATAR EN REGISTRO
 // ============================================================
 regAvatar.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) {
-    showToast('❌ La foto no puede superar los 5MB.', 'error');
+    showToast('❌ La foto no puede superar 5MB.', 'error');
     return;
   }
   const reader = new FileReader();
   reader.onload = (ev) => {
-    avatarPreview.innerHTML = `<img src="${ev.target.result}" alt="Vista previa" style="width:100%;height:100%;object-fit:cover;">`;
+    avatarPreview.innerHTML = `<img src="${ev.target.result}" alt="Preview" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
   };
   reader.readAsDataURL(file);
 });
-
 avatarPreview.addEventListener('click', () => regAvatar.click());
 
 // ============================================================
-// 🏠 ROOMS — Real-time Firestore
+// 🏠 SALAS — Tiempo real con Firestore
 // ============================================================
 function loadRooms() {
   if (unsubRooms) unsubRooms();
 
   const q = query(collection(db, 'rooms'), orderBy('createdAt', 'asc'));
 
-  unsubRooms = onSnapshot(q, (snapshot) => {
-    roomsList.innerHTML = '';
-
-    if (snapshot.empty) {
-      const hint = document.createElement('div');
-      hint.style.cssText = 'padding:16px;font-size:12px;color:var(--text-3);text-align:center;line-height:1.6;';
-      hint.textContent = 'No hay salas todavía. ¡Crea la primera!';
-      roomsList.appendChild(hint);
-      return;
+  unsubRooms = onSnapshot(q,
+    (snapshot) => {
+      roomsList.innerHTML = '';
+      if (snapshot.empty) {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'padding:16px;font-size:12px;color:var(--text-3);text-align:center;line-height:1.6;';
+        hint.textContent = '¡No hay salas aún! Crea la primera.';
+        roomsList.appendChild(hint);
+        return;
+      }
+      snapshot.forEach(snap => renderRoomItem({ id: snap.id, ...snap.data() }));
+    },
+    (err) => {
+      console.error('Firestore rooms error:', err.code, err.message);
+      if (err.code === 'permission-denied') {
+        showToast('⚠️ Reglas de Firestore bloqueando. Actualiza las reglas (ver consola).', 'error');
+      } else {
+        showToast('Error al cargar salas: ' + err.message, 'error');
+      }
     }
+  );
+}
 
-    snapshot.forEach(docSnap => {
-      const room = { id: docSnap.id, ...docSnap.data() };
-      const item = document.createElement('div');
-      item.className = `room-item${room.id === currentRoomId ? ' active' : ''}${room.type === 'private' ? ' private' : ''}`;
-      item.dataset.roomId = room.id;
-      item.setAttribute('role', 'button');
-      item.setAttribute('tabindex', '0');
-      item.setAttribute('aria-label', `Sala ${room.name}`);
-
-      const hashIcon = room.type === 'private' ? '🔒' : '#';
-      item.innerHTML = `
-        <span class="room-hash">${hashIcon}</span>
-        <span class="room-name">${escapeHtml(room.name)}</span>
-      `;
-
-      item.addEventListener('click', () => {
-        selectRoom(room.id, room.name, room.description || '', room.type);
-        closeSidebarMobile();
-      });
-
-      item.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          item.click();
-        }
-      });
-
-      roomsList.appendChild(item);
-    });
-  }, (err) => {
-    console.error('Error cargando salas:', err);
-    showToast('Error al cargar las salas. Verifica Firebase.', 'error');
+function renderRoomItem(room) {
+  const item = document.createElement('div');
+  item.className = `room-item${room.id === currentRoomId ? ' active' : ''}${room.type === 'private' ? ' private' : ''}`;
+  item.dataset.roomId = room.id;
+  item.setAttribute('role', 'button');
+  item.setAttribute('tabindex', '0');
+  item.setAttribute('aria-label', `Sala ${room.name}`);
+  item.innerHTML = `
+    <span class="room-hash">${room.type === 'private' ? '🔒' : '#'}</span>
+    <span class="room-name">${escHtml(room.name)}</span>
+  `;
+  item.addEventListener('click', () => {
+    selectRoom(room.id, room.name, room.description || '', room.type);
+    closeSidebarMobile();
   });
+  item.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+  });
+  roomsList.appendChild(item);
 }
 
 // ============================================================
-// 🚀 SELECT ROOM
+// 🚀 SELECCIONAR SALA
 // ============================================================
 function selectRoom(roomId, name, desc, type) {
   if (currentRoomId === roomId) return;
-
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
 
-  currentRoomId   = roomId;
-  currentRoomName = name;
-  lastMsgSenderId = null;
+  currentRoomId = roomId;
+  lastSenderId  = null;
 
   welcomeScreen.style.display  = 'none';
   chatRoomArea.style.display   = 'flex';
@@ -504,12 +475,11 @@ function selectRoom(roomId, name, desc, type) {
   currentRoomDescEl.textContent = desc || 'Sala de chat';
   headerRoomIcon.textContent    = type === 'private' ? '🔒' : '#';
 
-  // Highlight active room
   document.querySelectorAll('.room-item').forEach(el => {
     el.classList.toggle('active', el.dataset.roomId === roomId);
   });
 
-  // Clear messages (keep spacer)
+  // Limpiar mensajes
   Array.from(messagesEl.children).forEach(el => {
     if (!el.classList.contains('messages-start-spacer')) el.remove();
   });
@@ -519,7 +489,7 @@ function selectRoom(roomId, name, desc, type) {
 }
 
 // ============================================================
-// 💬 MESSAGES — Real-time listener
+// 💬 MENSAJES — Tiempo real
 // ============================================================
 function loadMessages(roomId) {
   const q = query(
@@ -528,135 +498,129 @@ function loadMessages(roomId) {
     limit(80)
   );
 
-  unsubMessages = onSnapshot(q, (snapshot) => {
-    snapshot.docChanges().forEach(change => {
-      if (change.type === 'added') {
-        renderMessage({ id: change.doc.id, ...change.doc.data() });
-      }
-    });
-    scrollToBottom();
-  }, (err) => {
-    console.error('Error cargando mensajes:', err);
-  });
+  unsubMessages = onSnapshot(q,
+    (snapshot) => {
+      snapshot.docChanges().forEach(change => {
+        if (change.type === 'added') renderMessage({ id: change.doc.id, ...change.doc.data() });
+      });
+      scrollBottom();
+    },
+    (err) => {
+      console.error('Messages error:', err.code);
+    }
+  );
 }
 
 // ============================================================
-// 🎨 RENDER MESSAGE
+// 🎨 RENDERIZAR MENSAJE
 // ============================================================
 function renderMessage(msg) {
   const isSelf    = msg.sender?.uid === currentUser?.uid;
-  const isGrouped = msg.sender?.uid === lastMsgSenderId;
-  lastMsgSenderId = msg.sender?.uid;
+  const isGrouped = msg.sender?.uid === lastSenderId;
+  lastSenderId    = msg.sender?.uid;
 
-  const wrapper = document.createElement('div');
-  wrapper.className = `msg-wrapper${isSelf ? ' sent' : ' received'}${isGrouped ? ' grouped' : ''}`;
+  const wrap = document.createElement('div');
+  wrap.className = `msg-wrapper${isSelf ? ' sent' : ' received'}${isGrouped ? ' grouped' : ''}`;
 
-  // Avatar
-  const avatarEl = document.createElement('div');
-  avatarEl.className = `msg-avatar${isGrouped ? ' hidden' : ''}`;
+  const av = document.createElement('div');
+  av.className = `msg-avatar${isGrouped ? ' hidden' : ''}`;
   if (msg.sender?.photoURL) {
-    avatarEl.innerHTML = `<img src="${msg.sender.photoURL}" alt="${escapeHtml(msg.sender.displayName || 'U')}">`;
+    av.innerHTML = `<img src="${msg.sender.photoURL}" alt="${escHtml(msg.sender.displayName || 'U')}">`;
   } else {
-    avatarEl.textContent = (msg.sender?.displayName || 'U').charAt(0).toUpperCase();
+    av.textContent = (msg.sender?.displayName || 'U').charAt(0).toUpperCase();
   }
 
-  // Body
-  const bodyEl = document.createElement('div');
-  bodyEl.className = 'msg-body';
+  const body = document.createElement('div');
+  body.className = 'msg-body';
 
   if (!isGrouped && !isSelf) {
-    const senderEl = document.createElement('div');
-    senderEl.className = 'msg-sender';
-    senderEl.textContent = msg.sender?.displayName || 'Usuario';
-    bodyEl.appendChild(senderEl);
+    const sn = document.createElement('div');
+    sn.className  = 'msg-sender';
+    sn.textContent = msg.sender?.displayName || 'Usuario';
+    body.appendChild(sn);
   }
 
-  // Message content by type
-  let contentEl;
-
+  let content;
   switch (msg.type) {
     case 'image': {
-      contentEl = document.createElement('div');
-      contentEl.className = 'msg-image msg-bubble';
-      contentEl.style.cssText = 'padding:0;overflow:hidden;cursor:zoom-in;';
+      content = document.createElement('div');
+      content.className = 'msg-image msg-bubble';
+      content.style.cssText = 'padding:0;overflow:hidden;cursor:zoom-in;';
       const img = document.createElement('img');
       img.src = msg.fileUrl;
-      img.alt = 'Imagen enviada';
+      img.alt = 'Imagen';
       img.loading = 'lazy';
       img.style.cssText = 'width:100%;display:block;border-radius:inherit;';
       img.addEventListener('click', () => openLightbox(msg.fileUrl));
-      contentEl.appendChild(img);
+      content.appendChild(img);
       break;
     }
     case 'file': {
-      contentEl = document.createElement('a');
-      contentEl.className = 'msg-file';
-      contentEl.href = msg.fileUrl;
-      contentEl.target = '_blank';
-      contentEl.rel = 'noopener noreferrer';
-      contentEl.setAttribute('aria-label', `Descargar ${msg.fileName}`);
-      contentEl.innerHTML = `
-        <div class="file-icon-badge">${getFileIcon(msg.mimeType || '')}</div>
+      content = document.createElement('a');
+      content.className = 'msg-file';
+      content.href = msg.fileUrl;
+      content.target = '_blank';
+      content.rel = 'noopener noreferrer';
+      content.innerHTML = `
+        <div class="file-icon-badge">${fileIcon(msg.mimeType)}</div>
         <div class="file-info">
-          <div class="file-name">${escapeHtml(msg.fileName || 'Archivo')}</div>
-          <div class="file-size">${formatBytes(msg.fileSize || 0)}</div>
+          <div class="file-name">${escHtml(msg.fileName || 'Archivo')}</div>
+          <div class="file-size">${fmtBytes(msg.fileSize || 0)}</div>
         </div>
         <span style="font-size:18px;color:var(--accent)">⬇️</span>
       `;
       break;
     }
     case 'audio': {
-      contentEl = document.createElement('div');
-      contentEl.className = 'msg-bubble msg-audio-player';
-      // Use both webm and ogg sources for compatibility
-      contentEl.innerHTML = `
+      content = document.createElement('div');
+      content.className = 'msg-bubble msg-audio-player';
+      content.innerHTML = `
         <span style="font-size:20px;">🎙️</span>
-        <audio controls preload="metadata" aria-label="Nota de audio" style="flex:1;height:32px;">
+        <audio controls preload="metadata" style="flex:1;height:32px;">
           <source src="${msg.fileUrl}" type="${msg.mimeType || 'audio/webm'}">
-          Tu navegador no soporta la reproducción de audio.
         </audio>
       `;
       break;
     }
     default: {
-      contentEl = document.createElement('div');
-      contentEl.className = 'msg-bubble';
-      contentEl.textContent = msg.content || '';
-      break;
+      content = document.createElement('div');
+      content.className = 'msg-bubble';
+      content.textContent = msg.content || '';
     }
   }
 
-  bodyEl.appendChild(contentEl);
+  body.appendChild(content);
 
-  // Timestamp
-  const timeEl = document.createElement('div');
-  timeEl.className = 'msg-time';
-  timeEl.textContent = formatTimestamp(msg.timestamp);
-  bodyEl.appendChild(timeEl);
+  const ts = document.createElement('div');
+  ts.className  = 'msg-time';
+  ts.textContent = fmtTime(msg.timestamp);
+  body.appendChild(ts);
 
-  wrapper.appendChild(avatarEl);
-  wrapper.appendChild(bodyEl);
-  messagesEl.appendChild(wrapper);
+  wrap.appendChild(av);
+  wrap.appendChild(body);
+  messagesEl.appendChild(wrap);
 }
 
 function appendSystemMsg(text) {
   const el = document.createElement('div');
-  el.className = 'system-msg';
+  el.className  = 'system-msg';
   el.textContent = text;
   messagesEl.appendChild(el);
 }
 
-function scrollToBottom() {
+function scrollBottom() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 // ============================================================
-// ✉️ UNIFIED SEND HANDLER — Text or File
+// ✉️ ENVIAR (unificado — texto o archivo)
 // ============================================================
 async function handleSend() {
-  if (!currentRoomId) return;
+  if (!currentRoomId) {
+    showToast('⚠️ Selecciona una sala primero.', 'info');
+    return;
+  }
 
-  // Priority: file > text
   if (pendingFile) {
     await sendFileMessage();
     return;
@@ -666,76 +630,72 @@ async function handleSend() {
   if (!content) return;
 
   messageInput.value = '';
-  autoResizeTextarea();
+  autoResizeTA();
 
   try {
     await addDoc(collection(db, 'rooms', currentRoomId, 'messages'), {
       type: 'text',
       content,
-      sender: {
-        uid:         currentUser.uid,
-        displayName: currentUser.displayName || currentUser.email,
-        photoURL:    currentUser.photoURL || ''
-      },
+      sender: senderInfo(),
       timestamp: serverTimestamp()
     });
   } catch (err) {
-    showToast('Error al enviar el mensaje.', 'error');
-    console.error(err);
+    console.error('Send error:', err);
+    showToast('Error al enviar. Comprueba tu conexión.', 'error');
   }
 }
 
-// Single send button listener
 sendMsgBtn.addEventListener('click', handleSend);
-
-// Enter to send (Shift+Enter = new line)
 messageInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    handleSend();
-  }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
 });
 
-// Auto-resize textarea
-function autoResizeTextarea() {
+function autoResizeTA() {
   messageInput.style.height = 'auto';
   messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
 }
-messageInput.addEventListener('input', autoResizeTextarea);
+messageInput.addEventListener('input', autoResizeTA);
+
+function senderInfo() {
+  return {
+    uid:         currentUser.uid,
+    displayName: currentUser.displayName || currentUser.email,
+    photoURL:    currentUser.photoURL || ''
+  };
+}
 
 // ============================================================
-// 📁 FILE HANDLING
+// 📁 ARCHIVOS — Foto y general
 // ============================================================
-photoInput.addEventListener('change', (e) => handleFileSelected(e.target.files[0], 'image'));
-fileInput.addEventListener('change',  (e) => handleFileSelected(e.target.files[0], 'file'));
+photoInput.addEventListener('change', (e) => fileSelected(e.target.files[0], 'image'));
+fileInput.addEventListener('change',  (e) => fileSelected(e.target.files[0], 'file'));
 
-function handleFileSelected(file, type) {
+function fileSelected(file, type) {
   if (!file) return;
-  const maxSize = type === 'image' ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
-  if (file.size > maxSize) {
+  const max = type === 'image' ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+  if (file.size > max) {
     showToast(`❌ El archivo supera el límite (${type === 'image' ? '10MB' : '25MB'}).`, 'error');
     return;
   }
   pendingFile = { file, type };
-  showFilePreviewBar(file, type);
+  showFileBar(file, type);
 }
 
-function showFilePreviewBar(file, type) {
+function showFileBar(file, type) {
   filePreviewBar.style.display = 'flex';
   fpName.textContent = file.name;
-  fpSize.textContent = formatBytes(file.size);
+  fpSize.textContent = fmtBytes(file.size);
   fpIcon.innerHTML   = '';
-
   if (type === 'image') {
     const thumb = document.createElement('img');
     thumb.className = 'file-preview-thumb';
-    thumb.alt = 'Vista previa';
-    const reader = new FileReader();
-    reader.onload = ev => { thumb.src = ev.target.result; };
-    reader.readAsDataURL(file);
+    thumb.alt = 'Preview';
+    const r = new FileReader();
+    r.onload = ev => { thumb.src = ev.target.result; };
+    r.readAsDataURL(file);
     fpIcon.appendChild(thumb);
   } else {
-    fpIcon.textContent = getFileIcon(file.type);
+    fpIcon.textContent = fileIcon(file.type);
   }
 }
 
@@ -755,12 +715,12 @@ async function sendFileMessage() {
   photoInput.value = '';
   fileInput.value  = '';
 
-  const path = `rooms/${currentRoomId}/${type === 'image' ? 'images' : 'files'}/${Date.now()}_${file.name}`;
-  showUploadIndicator(type === 'image' ? '📷 Subiendo imagen…' : '📎 Subiendo archivo…');
+  const folder = `rooms/${currentRoomId}/${type === 'image' ? 'images' : 'files'}`;
+  showUpload(type === 'image' ? '📷 Subiendo imagen…' : '📎 Subiendo archivo…');
 
   try {
-    const fileUrl = await uploadFileToStorage(file, path, updateUploadProgress);
-    hideUploadIndicator();
+    const fileUrl = await uploadToCloudinary(file, folder, updateUpload);
+    hideUpload();
 
     await addDoc(collection(db, 'rooms', currentRoomId, 'messages'), {
       type:     type === 'image' ? 'image' : 'file',
@@ -768,29 +728,21 @@ async function sendFileMessage() {
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type,
-      sender: {
-        uid:         currentUser.uid,
-        displayName: currentUser.displayName || currentUser.email,
-        photoURL:    currentUser.photoURL || ''
-      },
+      sender:    senderInfo(),
       timestamp: serverTimestamp()
     });
   } catch (err) {
-    hideUploadIndicator();
-    showToast('❌ Error al subir el archivo.', 'error');
+    hideUpload();
+    showToast(`❌ Error al subir: ${err.message}`, 'error');
     console.error(err);
   }
 }
 
 // ============================================================
-// 🎙️ AUDIO RECORDING
+// 🎙️ GRABACIÓN DE AUDIO
 // ============================================================
 audioRecordBtn.addEventListener('click', () => {
-  if (isRecording) {
-    stopRecording();
-  } else {
-    startRecording();
-  }
+  isRecording ? stopRecording() : startRecording();
 });
 
 async function startRecording() {
@@ -800,39 +752,33 @@ async function startRecording() {
   }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedAudioMime() });
+    mediaRecorder = new MediaRecorder(stream, { mimeType: supportedAudioMime() });
     audioChunks   = [];
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunks.push(e.data);
-    };
-
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
     mediaRecorder.start(200);
-    isRecording    = true;
-    recordingSeconds = 0;
+    isRecording = true;
+    recSeconds  = 0;
 
     audioRecordBtn.classList.add('recording-active');
     audioRecordBtn.setAttribute('aria-pressed', 'true');
     recordingBar.style.display = 'flex';
     recordingTime.textContent  = '0:00';
 
-    recordingInterval = setInterval(() => {
-      recordingSeconds++;
-      const m = Math.floor(recordingSeconds / 60);
-      const s = recordingSeconds % 60;
+    recInterval = setInterval(() => {
+      recSeconds++;
+      const m = Math.floor(recSeconds / 60);
+      const s = recSeconds % 60;
       recordingTime.textContent = `${m}:${String(s).padStart(2, '0')}`;
-      if (recordingSeconds >= 300) stopRecording();
+      if (recSeconds >= 300) stopRecording();
     }, 1000);
-
   } catch (err) {
     showToast('❌ No se pudo acceder al micrófono.', 'error');
-    console.error(err);
   }
 }
 
 function stopRecording() {
   if (!mediaRecorder || !isRecording) return;
-  clearInterval(recordingInterval);
+  clearInterval(recInterval);
   isRecording = false;
   audioRecordBtn.classList.remove('recording-active');
   audioRecordBtn.setAttribute('aria-pressed', 'false');
@@ -843,11 +789,11 @@ function stopRecording() {
 function cancelRecording() {
   if (mediaRecorder) {
     mediaRecorder.stop();
-    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    mediaRecorder.stream?.getTracks().forEach(t => t.stop());
   }
-  clearInterval(recordingInterval);
-  isRecording  = false;
-  audioChunks  = [];
+  clearInterval(recInterval);
+  isRecording = false;
+  audioChunks = [];
   mediaRecorder = null;
   recordingBar.style.display = 'none';
   audioRecordBtn.classList.remove('recording-active');
@@ -867,70 +813,48 @@ sendAudioBtn.addEventListener('click', async () => {
   }
 
   recordingBar.style.display = 'none';
-  const mimeType = getSupportedAudioMime();
-  const blob = new Blob(audioChunks, { type: mimeType });
-  const ext  = mimeType.includes('ogg') ? 'ogg' : 'webm';
+  const mime = supportedAudioMime();
+  const blob = new Blob(audioChunks, { type: mime });
+  const ext  = mime.includes('ogg') ? 'ogg' : 'webm';
   audioChunks  = [];
   mediaRecorder = null;
 
-  const path = `rooms/${currentRoomId}/audios/${Date.now()}.${ext}`;
-  showUploadIndicator('🎙️ Enviando audio…');
-
+  showUpload('🎙️ Enviando audio…');
   try {
-    const fileUrl = await uploadFileToStorage(blob, path, updateUploadProgress);
-    hideUploadIndicator();
+    const fileUrl = await uploadToCloudinary(blob, `rooms/${currentRoomId}/audios`, updateUpload);
+    hideUpload();
     await addDoc(collection(db, 'rooms', currentRoomId, 'messages'), {
       type:      'audio',
       fileUrl,
       fileName:  `audio_${Date.now()}.${ext}`,
-      mimeType,
-      sender: {
-        uid:         currentUser.uid,
-        displayName: currentUser.displayName || currentUser.email,
-        photoURL:    currentUser.photoURL || ''
-      },
+      mimeType:  mime,
+      sender:    senderInfo(),
       timestamp: serverTimestamp()
     });
   } catch (err) {
-    hideUploadIndicator();
-    showToast('❌ Error al enviar el audio.', 'error');
-    console.error(err);
+    hideUpload();
+    showToast(`❌ Error enviando audio: ${err.message}`, 'error');
   }
 });
 
-function getSupportedAudioMime() {
-  const types = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/ogg'
-  ];
+function supportedAudioMime() {
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
   return types.find(t => MediaRecorder.isTypeSupported(t)) || 'audio/webm';
 }
 
 // ============================================================
-// ☁️ UPLOAD TO CLOUDINARY (100% gratuito — sin tarjeta)
+// ☁️ CLOUDINARY — Subida de archivos (100% GRATIS)
 // ============================================================
-function uploadFileToStorage(file, path, onProgress) {
+function uploadToCloudinary(file, folder, onProgress) {
   return new Promise((resolve, reject) => {
-
-    // Verifica que Cloudinary esté configurado
-    if (!cloudinaryConfig.cloudName || cloudinaryConfig.cloudName === 'TU_CLOUD_NAME_AQUI') {
-      reject(new Error('Cloudinary no configurado. Agrega tu cloudName y uploadPreset en firebase-config.js'));
-      return;
-    }
-
-    const folder = path.split('/').slice(0, -1).join('/');
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', cloudinaryConfig.uploadPreset);
     formData.append('folder', `chatflow/${folder}`);
 
     const xhr = new XMLHttpRequest();
-    const endpoint = `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/upload`;
-    xhr.open('POST', endpoint, true);
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/upload`, true);
 
-    // Progreso real de subida
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
         onProgress(Math.round((e.loaded / e.total) * 100));
@@ -940,13 +864,10 @@ function uploadFileToStorage(file, path, onProgress) {
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         const data = JSON.parse(xhr.responseText);
-        if (data.error) {
-          reject(new Error(data.error.message));
-        } else {
-          resolve(data.secure_url);
-        }
+        if (data.error) reject(new Error(data.error.message));
+        else resolve(data.secure_url);
       } else {
-        reject(new Error(`Error Cloudinary: ${xhr.status}`));
+        reject(new Error(`Cloudinary error ${xhr.status}`));
       }
     };
 
@@ -955,42 +876,40 @@ function uploadFileToStorage(file, path, onProgress) {
   });
 }
 
-function showUploadIndicator(label) {
+function showUpload(label) {
   uploadIndicator.style.display = 'flex';
   uploadLabel.textContent       = label;
   uploadBarFill.style.width     = '0%';
   uploadPercent.textContent     = '0%';
 }
-
-function updateUploadProgress(pct) {
+function updateUpload(pct) {
   uploadBarFill.style.width = pct + '%';
   uploadPercent.textContent = pct + '%';
 }
-
-function hideUploadIndicator() {
+function hideUpload() {
   uploadIndicator.style.display = 'none';
 }
 
 // ============================================================
-// 😀 EMOJI PICKER
+// 😀 SELECTOR DE EMOJIS
 // ============================================================
 emojiBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  const isOpen = emojiPickerWrap.style.display !== 'none';
-  emojiPickerWrap.style.display = isOpen ? 'none' : 'block';
-  emojiBtn.classList.toggle('emoji-active', !isOpen);
-  emojiBtn.setAttribute('aria-expanded', String(!isOpen));
+  const open = emojiPickerWrap.style.display !== 'none';
+  emojiPickerWrap.style.display = open ? 'none' : 'block';
+  emojiBtn.classList.toggle('emoji-active', !open);
+  emojiBtn.setAttribute('aria-expanded', String(!open));
 });
 
 emojiPicker.addEventListener('emoji-click', (e) => {
   const emoji = e.detail.unicode;
-  const pos   = messageInput.selectionStart || messageInput.value.length;
+  const pos   = messageInput.selectionStart ?? messageInput.value.length;
   const val   = messageInput.value;
   messageInput.value = val.slice(0, pos) + emoji + val.slice(pos);
-  const newPos = pos + emoji.length;
-  messageInput.setSelectionRange(newPos, newPos);
+  const np = pos + emoji.length;
+  messageInput.setSelectionRange(np, np);
   messageInput.focus();
-  autoResizeTextarea();
+  autoResizeTA();
 });
 
 document.addEventListener('click', (e) => {
@@ -1002,9 +921,9 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// 🏠 CREATE ROOM MODAL
+// ➕ MODAL CREAR SALA
 // ============================================================
-function openCreateRoomModal() {
+function openModal() {
   createRoomModal.style.display = 'flex';
   roomNameInput.value = '';
   roomDescInput.value = '';
@@ -1013,23 +932,21 @@ function openCreateRoomModal() {
   radioPrivateLabel.classList.remove('selected');
   setTimeout(() => roomNameInput.focus(), 50);
 }
-
-function closeCreateRoomModal() {
+function closeModal() {
   createRoomModal.style.display = 'none';
 }
 
-createRoomBtn.addEventListener('click', openCreateRoomModal);
-welcomeCreateBtn.addEventListener('click', openCreateRoomModal);
-cancelRoomBtn.addEventListener('click', closeCreateRoomModal);
-
+createRoomBtn.addEventListener('click', openModal);
+welcomeCreateBtn.addEventListener('click', openModal);
+cancelRoomBtn.addEventListener('click', closeModal);
 createRoomModal.querySelector('.modal-overlay').addEventListener('click', (e) => {
-  if (e.target === createRoomModal.querySelector('.modal-overlay')) closeCreateRoomModal();
+  if (e.target === createRoomModal.querySelector('.modal-overlay')) closeModal();
 });
 
-document.querySelectorAll('input[name="room-type"]').forEach(radio => {
-  radio.addEventListener('change', () => {
-    radioPublicLabel.classList.toggle('selected',  radio.value === 'public');
-    radioPrivateLabel.classList.toggle('selected', radio.value === 'private');
+document.querySelectorAll('input[name="room-type"]').forEach(r => {
+  r.addEventListener('change', () => {
+    radioPublicLabel.classList.toggle('selected',  r.value === 'public');
+    radioPrivateLabel.classList.toggle('selected', r.value === 'private');
   });
 });
 
@@ -1040,27 +957,36 @@ createRoomForm.addEventListener('submit', async (e) => {
   const type = document.querySelector('input[name="room-type"]:checked').value;
   if (!name) return;
 
-  const submitBtn = document.getElementById('create-room-submit-btn');
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<span class="spinner"></span> Creando…';
+  if (!currentUser) {
+    showToast('⚠️ Debes iniciar sesión primero.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('create-room-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Creando…';
 
   try {
-    const docRef = await addDoc(collection(db, 'rooms'), {
+    const ref = await addDoc(collection(db, 'rooms'), {
       name,
       description: desc,
       type,
       createdBy:  currentUser.uid,
       createdAt:  serverTimestamp()
     });
-    closeCreateRoomModal();
-    selectRoom(docRef.id, name, desc, type);
-    showToast(`✅ Sala "${name}" creada con éxito.`, 'success');
+    closeModal();
+    selectRoom(ref.id, name, desc, type);
+    showToast(`✅ Sala "${name}" creada.`, 'success');
   } catch (err) {
-    showToast('❌ Error al crear la sala. Verifica Firebase.', 'error');
-    console.error(err);
+    console.error('Create room error:', err.code, err.message);
+    if (err.code === 'permission-denied') {
+      showToast('❌ Firestore bloqueó la operación. Actualiza las reglas de seguridad.', 'error');
+    } else {
+      showToast(`❌ Error: ${err.message}`, 'error');
+    }
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Crear Sala';
+    btn.disabled = false;
+    btn.textContent = 'Crear Sala';
   }
 });
 
@@ -1072,145 +998,124 @@ function openLightbox(url) {
   lightbox.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
-
 function closeLightbox() {
   lightbox.style.display = 'none';
   lightboxImg.src = '';
   document.body.style.overflow = '';
 }
-
 lightboxClose.addEventListener('click', closeLightbox);
 lightbox.addEventListener('click', (e) => {
   if (e.target === lightbox || e.target === lightboxImg) closeLightbox();
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeLightbox();
-    closeCreateRoomModal();
-  }
+  if (e.key === 'Escape') { closeLightbox(); closeModal(); }
 });
 
 // ============================================================
-// 📱 MOBILE SIDEBAR
+// 📱 SIDEBAR MÓVIL
 // ============================================================
-function checkMobileLayout() {
-  const isMobile = window.innerWidth <= 768;
-  if (toggleSidebarBtn) toggleSidebarBtn.style.display = isMobile ? 'flex' : 'none';
+function checkLayout() {
+  if (toggleSidebarBtn) toggleSidebarBtn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
 }
-
 if (toggleSidebarBtn) {
   toggleSidebarBtn.addEventListener('click', () => {
     sidebarEl.classList.toggle('open');
     sidebarOverlay.classList.toggle('show');
   });
 }
-
-if (sidebarOverlay) {
-  sidebarOverlay.addEventListener('click', closeSidebarMobile);
-}
-
+if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebarMobile);
 function closeSidebarMobile() {
   sidebarEl.classList.remove('open');
   sidebarOverlay.classList.remove('show');
 }
-
-window.addEventListener('resize', checkMobileLayout);
+window.addEventListener('resize', checkLayout);
 
 // ============================================================
-// 🔔 TOAST NOTIFICATIONS
+// 🔔 TOASTS
 // ============================================================
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-  toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
-  toastContainer.appendChild(toast);
+function showToast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icons = { success:'✅', error:'❌', info:'ℹ️' };
+  t.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  toastContainer.appendChild(t);
   setTimeout(() => {
-    toast.style.transition = 'opacity 0.3s ease';
-    toast.style.opacity    = '0';
-    setTimeout(() => toast.remove(), 350);
-  }, 4000);
+    t.style.transition = 'opacity 0.3s';
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 350);
+  }, 4500);
 }
 
 // ============================================================
-// 🛠️ UTILITIES
+// 🛠️ UTILIDADES
 // ============================================================
-function showAuthError(el, msg) {
-  el.textContent = msg;
-  el.classList.add('show');
-}
+function showAuthError(el, msg) { el.textContent = msg; el.classList.add('show'); }
 
-function setLoading(btn, loading) {
-  if (loading) {
-    btn.dataset.origHtml = btn.innerHTML;
+function setLoading(btn, on) {
+  if (on) {
+    btn.dataset.orig = btn.innerHTML;
     btn.classList.add('loading');
     btn.innerHTML = '<span class="spinner"></span><span>Cargando…</span>';
   } else {
     btn.classList.remove('loading');
-    btn.innerHTML = btn.dataset.origHtml || btn.innerHTML;
+    btn.innerHTML = btn.dataset.orig || btn.innerHTML;
   }
 }
 
 function translateAuthError(code) {
-  const map = {
-    'auth/invalid-email':          'El correo electrónico no es válido.',
-    'auth/user-disabled':          'Esta cuenta ha sido deshabilitada.',
-    'auth/user-not-found':         'No existe una cuenta con ese correo.',
+  const m = {
+    'auth/invalid-email':          'Correo electrónico inválido.',
+    'auth/user-not-found':         'No existe cuenta con ese correo.',
     'auth/wrong-password':         'Contraseña incorrecta.',
-    'auth/email-already-in-use':   'Ya existe una cuenta con ese correo electrónico.',
-    'auth/weak-password':          'La contraseña es demasiado débil (mínimo 6 caracteres).',
-    'auth/too-many-requests':      'Demasiados intentos fallidos. Intenta más tarde.',
-    'auth/network-request-failed': 'Error de red. Verifica tu conexión a internet.',
     'auth/invalid-credential':     'Correo o contraseña incorrectos.',
-    'auth/operation-not-allowed':  'Este método de acceso no está habilitado en Firebase.',
-    'auth/popup-closed-by-user':   'Proceso cancelado.',
+    'auth/email-already-in-use':   'Ya existe una cuenta con ese correo.',
+    'auth/weak-password':          'Contraseña demasiado débil (mínimo 6 caracteres).',
+    'auth/too-many-requests':      'Demasiados intentos. Espera un momento.',
+    'auth/network-request-failed': 'Sin conexión a internet.',
+    'auth/user-disabled':          'Esta cuenta fue deshabilitada.',
   };
-  return map[code] || `Error (${code}). Intenta de nuevo.`;
+  return m[code] || `Error: ${code}`;
 }
 
-function formatTimestamp(ts) {
+function fmtTime(ts) {
   if (!ts) return '';
   try {
-    const date = ts.toDate ? ts.toDate() : new Date(ts);
-    return date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return '';
-  }
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
 }
 
-function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+function fmtBytes(b) {
+  if (!b) return '0 B';
+  const k = 1024, s = ['B','KB','MB','GB'];
+  const i = Math.floor(Math.log(b) / Math.log(k));
+  return (b / Math.pow(k, i)).toFixed(1) + ' ' + s[i];
 }
 
-function getFileIcon(mimeType = '') {
-  if (mimeType.startsWith('image/'))        return '🖼️';
-  if (mimeType.startsWith('video/'))        return '🎬';
-  if (mimeType.startsWith('audio/'))        return '🎵';
-  if (mimeType.includes('pdf'))             return '📕';
-  if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
-  if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
-  if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return '📊';
-  if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return '📦';
-  if (mimeType.includes('text/'))           return '📃';
+function fileIcon(mime = '') {
+  if (mime.startsWith('image/'))  return '🖼️';
+  if (mime.startsWith('video/'))  return '🎬';
+  if (mime.startsWith('audio/'))  return '🎵';
+  if (mime.includes('pdf'))       return '📕';
+  if (mime.includes('word') || mime.includes('document')) return '📝';
+  if (mime.includes('excel') || mime.includes('sheet'))   return '📊';
+  if (mime.includes('zip') || mime.includes('rar'))       return '📦';
+  if (mime.includes('text/'))     return '📃';
   return '📄';
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str || '';
-  return div.innerHTML;
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
 }
 
 // ============================================================
-// 🚀 INIT
+// 🚀 INICIALIZAR
 // ============================================================
 function init() {
   populateCountryCodes();
-  checkMobileLayout();
+  checkLayout();
   loginForm.style.display    = 'flex';
   registerForm.style.display = 'none';
 }
